@@ -49,3 +49,8 @@ quantum/
 - **Imports have changed** - Old imports will not work
 - **This is a backup** - Keep until you're confident the migration is complete
 
+## Archive Organization
+
+For detailed information about archived broken/experimental components, see:
+- `docs/archive/README_ARCHIVE.md` - Complete archive documentation
+
