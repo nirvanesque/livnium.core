@@ -1,0 +1,144 @@
+{
+  "size": 3,
+  "run_id": 93,
+  "stability_type": "fixed_point",
+  "convergence_step": 1000,
+  "final_energy": 54.0,
+  "cells": {
+    "(-1, 1, 1)": {
+      "symbolic_weight": 27.0,
+      "cell_class": 3,
+      "face_exposure": 3
+    },
+    "(-1, 0, 1)": {
+      "symbolic_weight": 18.0,
+      "cell_class": 2,
+      "face_exposure": 2
+    },
+    "(-1, -1, 1)": {
+      "symbolic_weight": 27.0,
+      "cell_class": 3,
+      "face_exposure": 3
+    },
+    "(0, 1, 1)": {
+      "symbolic_weight": 18.0,
+      "cell_class": 2,
+      "face_exposure": 2
+    },
+    "(0, 0, 1)": {
+      "symbolic_weight": 9.0,
+      "cell_class": 1,
+      "face_exposure": 1
+    },
+    "(0, -1, 1)": {
+      "symbolic_weight": 18.0,
+      "cell_class": 2,
+      "face_exposure": 2
+    },
+    "(1, 1, 1)": {
+      "symbolic_weight": 27.0,
+      "cell_class": 3,
+      "face_exposure": 3
+    },
+    "(1, 0, 1)": {
+      "symbolic_weight": 18.0,
+      "cell_class": 2,
+      "face_exposure": 2
+    },
+    "(1, -1, 1)": {
+      "symbolic_weight": 27.0,
+      "cell_class": 3,
+      "face_exposure": 3
+    },
+    "(-1, 1, 0)": {
+      "symbolic_weight": 18.0,
+      "cell_class": 2,
+      "face_exposure": 2
+    },
+    "(-1, 0, 0)": {
+      "symbolic_weight": 9.0,
+      "cell_class": 1,
+      "face_exposure": 1
+    },
+    "(-1, -1, 0)": {
+      "symbolic_weight": 18.0,
+      "cell_class": 2,
+      "face_exposure": 2
+    },
+    "(0, 1, 0)": {
+      "symbolic_weight": 9.0,
+      "cell_class": 1,
+      "face_exposure": 1
+    },
+    "(0, 0, 0)": {
+      "symbolic_weight": 0.0,
+      "cell_class": 0,
+      "face_exposure": 0
+    },
+    "(0, -1, 0)": {
+      "symbolic_weight": 9.0,
+      "cell_class": 1,
+      "face_exposure": 1
+    },
+    "(1, 1, 0)": {
+      "symbolic_weight": 18.0,
+      "cell_class": 2,
+      "face_exposure": 2
+    },
+    "(1, 0, 0)": {
+      "symbolic_weight": 9.0,
+      "cell_class": 1,
+      "face_exposure": 1
+    },
+    "(1, -1, 0)": {
+      "symbolic_weight": 18.0,
+      "cell_class": 2,
+      "face_exposure": 2
+    },
+    "(-1, 1, -1)": {
+      "symbolic_weight": 27.0,
+      "cell_class": 3,
+      "face_exposure": 3
+    },
+    "(-1, 0, -1)": {
+      "symbolic_weight": 18.0,
+      "cell_class": 2,
+      "face_exposure": 2
+    },
+    "(-1, -1, -1)": {
+      "symbolic_weight": 27.0,
+      "cell_class": 3,
+      "face_exposure": 3
+    },
+    "(0, 1, -1)": {
+      "symbolic_weight": 18.0,
+      "cell_class": 2,
+      "face_exposure": 2
+    },
+    "(0, 0, -1)": {
+      "symbolic_weight": 9.0,
+      "cell_class": 1,
+      "face_exposure": 1
+    },
+    "(0, -1, -1)": {
+      "symbolic_weight": 18.0,
+      "cell_class": 2,
+      "face_exposure": 2
+    },
+    "(1, 1, -1)": {
+      "symbolic_weight": 27.0,
+      "cell_class": 3,
+      "face_exposure": 3
+    },
+    "(1, 0, -1)": {
+      "symbolic_weight": 18.0,
+      "cell_class": 2,
+      "face_exposure": 2
+    },
+    "(1, -1, -1)": {
+      "symbolic_weight": 27.0,
+      "cell_class": 3,
+      "face_exposure": 3
+    }
+  }
+}
