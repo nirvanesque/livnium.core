@@ -1,0 +1,10 @@
+{
+  "best_violations": 21,
+  "step": 22000,
+  "metadata": {
+    "constraint_type": "k4",
+    "n_vertices": 17,
+    "tension": 1.0,
+    "steps_to_best": 21055
+  }
+}
