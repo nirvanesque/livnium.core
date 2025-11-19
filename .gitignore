@@ -63,3 +63,8 @@ Thumbs.db
 # Archive (keep it but don't track changes)
 # archive/
 *.tar.gz
+
+# Data files (large datasets)
+experiments/nli/data/
+**/data/
+*.jsonl
