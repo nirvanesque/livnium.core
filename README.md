@@ -242,10 +242,25 @@ pip install numpy
 python3 experiments/nli/train_moksha_nli.py --clean --train 20000 --test 2000 --dev 2000
 ```
 
-### Test Golden Label Collapse
+### Test Collapse Mechanism (Quick Demo)
 
 ```bash
-# Verify 3-way collapse mechanism
+# Test a single premise-hypothesis pair
+python3 experiments/nli/test_golden_label_collapse.py \
+    --premise "A dog runs" \
+    --hypothesis "A dog is running"
+
+# Test contradiction
+python3 experiments/nli/test_golden_label_collapse.py \
+    --premise "The cat is sleeping" \
+    --hypothesis "The cat is awake"
+
+# Test neutral
+python3 experiments/nli/test_golden_label_collapse.py \
+    --premise "A bird flies" \
+    --hypothesis "The car is red"
+
+# Run full diagnostic suite
 python3 experiments/nli/test_golden_label_collapse.py --clean
 ```
 

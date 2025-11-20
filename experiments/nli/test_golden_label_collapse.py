@@ -271,11 +271,62 @@ def clean_all_caches(nli_dir: str = None):
     print()
 
 
+def test_single_pair(premise: str, hypothesis: str, encoder: NativeChainNLIEncoder, coupling: CrossOmcubeCoupling):
+    """
+    Test a single premise-hypothesis pair and print result.
+    Simple output for Reddit demo.
+    """
+    # Encode the pair
+    encoded_pair = encoder.encode_pair(premise, hypothesis)
+    
+    # Create classifier
+    classifier = OmcubeNLIClassifier(encoded_pair)
+    classifier.coupling = coupling
+    
+    # Perform collapse
+    result = classifier.classify(collapse=True)
+    
+    # Print result
+    print(f"Premise:    {premise}")
+    print(f"Hypothesis: {hypothesis}")
+    print()
+    print(f"Result: {result.label.upper()}")
+    print(f"Confidence: {result.confidence:.3f}")
+    print()
+    print("Probabilities:")
+    print(f"  Entailment:   {result.probabilities['entailment']:.3f}")
+    print(f"  Contradiction: {result.probabilities['contradiction']:.3f}")
+    print(f"  Neutral:      {result.probabilities['neutral']:.3f}")
+    print()
+    print(f"Resonance: {encoded_pair.get_resonance():.3f}")
+    
+    return result
+
+
 def main():
     """Run golden label collapse tests."""
     # Parse arguments
-    parser = argparse.ArgumentParser(description='Test golden label collapse behavior')
+    parser = argparse.ArgumentParser(
+        description='Test the collapse mechanism for NLI classification',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Test a single pair
+  python test_golden_label_collapse.py --premise "A dog runs" --hypothesis "A dog is running"
+  
+  # Test contradiction
+  python test_golden_label_collapse.py --premise "The cat is sleeping" --hypothesis "The cat is awake"
+  
+  # Test neutral
+  python test_golden_label_collapse.py --premise "A bird flies" --hypothesis "The car is red"
+  
+  # Run full diagnostic suite
+  python test_golden_label_collapse.py --clean
+        """
+    )
     parser.add_argument('--clean', action='store_true', help='Start with clean state (clear all caches)')
+    parser.add_argument('--premise', type=str, help='Premise sentence to test')
+    parser.add_argument('--hypothesis', type=str, help='Hypothesis sentence to test')
     args = parser.parse_args()
     
     # Clean if requested
@@ -283,21 +334,9 @@ def main():
         nli_dir = os.path.abspath(os.path.join(os.path.dirname(__file__)))
         clean_all_caches(nli_dir)
     
-    print("="*80)
-    print("GOLDEN LABEL COLLAPSE DIAGNOSTIC")
-    print("="*80)
-    print()
-    print("This test verifies:")
-    print("  1. Can the system collapse to all 3 classes?")
-    print("  2. Does collapse respect golden labels?")
-    print("  3. Do basins update correctly for each class?")
-    print()
-    
     # Clear lexicon for clean test
     lexicon = GlobalLexicon()
     lexicon.clear()
-    print("✓ Cleared Global Lexicon (clean start)")
-    print()
     
     # Initialize system
     config = LivniumCoreConfig(
@@ -309,6 +348,31 @@ def main():
     
     encoder = NativeChainNLIEncoder(lattice_size=3, config=config)
     coupling = CrossOmcubeCoupling(initial_depth=1.0)
+    
+    # If premise and hypothesis provided, run single test
+    if args.premise and args.hypothesis:
+        print("="*80)
+        print("COLLAPSE MECHANISM TEST")
+        print("="*80)
+        print()
+        test_single_pair(args.premise, args.hypothesis, encoder, coupling)
+        print()
+        print("="*80)
+        return
+    
+    # Otherwise run full diagnostic suite
+    print("="*80)
+    print("GOLDEN LABEL COLLAPSE DIAGNOSTIC")
+    print("="*80)
+    print()
+    print("This test verifies:")
+    print("  1. Can the system collapse to all 3 classes?")
+    print("  2. Does collapse respect golden labels?")
+    print("  3. Do basins update correctly for each class?")
+    print()
+    
+    print("✓ Cleared Global Lexicon (clean start)")
+    print()
     
     print("✓ System initialized")
     print()
