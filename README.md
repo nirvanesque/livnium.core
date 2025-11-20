@@ -5,7 +5,7 @@
 
 ---
 
-## ⚠️ IMPORTANT: Personal/Research Use Only
+## IMPORTANT: Personal/Research Use Only
 
 **This software is provided for PERSONAL, NON-COMMERCIAL, RESEARCH, and EDUCATIONAL PURPOSES ONLY.**
 
