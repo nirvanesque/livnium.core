@@ -1,110 +1,309 @@
-# LIVNIUM - Quantum-Inspired Classical Systems
+# LIVNIUM
+## Quantum-Inspired Geometric Computing & Native Language Understanding
 
-A collection of quantum-inspired classical computational systems and real tensor network physics solvers.
-
-## Overview
-
-LIVNIUM contains **three fundamentally different computational systems**:
-
-### 1. **Islands System** (`quantum/islands/`)
-Quantum-inspired information processing engine
-- 105–500+ qubit-analogous units
-- Information-theoretic quantum-inspired system
-- Geometric cube structure (3×3×3)
-- Use cases: Feature representation, semantic reasoning, classification
-
-### 2. **Hierarchical System** (`quantum/hierarchical/`)
-Hierarchical geometry machine with 3-level architecture
-- 5000+ qubit-analogue capacity
-- Geometry-in-geometry architecture (Level 0 → Level 1 → Level 2)
-- Linear memory scaling (~400 bytes per qubit analogue)
-- Use cases: Large-scale geometric reasoning, hierarchical state management
-
-### 3. **Livnium Core** (`quantum/livnium_core/`)
-Real tensor network physics solver
-- DMRG (Density Matrix Renormalization Group) / MPS (Matrix Product States)
-- 1D Transverse Field Ising Model (TFIM) ground state solver
-- Legitimate quantum many-body physics method
-- Use cases: Physics research, ground state finding, tensor network studies
-
-## Important Clarification
-
-⚠️ **These are quantum-inspired classical systems (islands & hierarchical), NOT physical quantum computers.**
-
-- **`islands/`** and **`hierarchical/`**: Quantum-inspired classical systems
-  - Use quantum language and concepts
-  - Operate on classical hardware
-  - Do NOT perform actual quantum computation
-
-- **`livnium_core/`**: Real physics solver
-  - Uses legitimate tensor network methods (MPS/DMRG)
-  - Solves actual physics problems
-  - Part of quantum many-body physics research
-
-## Quick Start
-
-### Islands System
-```python
-from quantum.islands.core.kernel import LivniumQubit
-
-# Create qubit-analogue
-qubit = LivniumQubit()
-```
-
-### Hierarchical System
-```python
-from quantum.hierarchical.core.quantum_processor import QuantumProcessor
-
-# Create processor
-processor = QuantumProcessor(base_dimension=3)
-qubit_id = processor.create_qubit((0.1, 0.2, 0.3))
-```
-
-### Livnium Core (Real Physics)
-```python
-from quantum.livnium_core.livnium_core_1D import LivniumCore1D
-
-# Solve 1D TFIM ground state
-solver = LivniumCore1D(n_qubits=20, J=1.0, g=1.0)
-energy = solver.optimize_ground_state(n_iterations=50)
-```
-
-## Project Structure
-
-```
-quantum/
-├── islands/          # Quantum-inspired information processing
-├── hierarchical/     # Geometry-in-geometry architecture
-├── livnium_core/     # Real MPS/DMRG tensor networks
-└── shared/           # Shared utilities
-
-docs/                 # Comprehensive documentation
-archive/              # Archived experimental/broken components
-```
-
-## Documentation
-
-- **Architecture Overview**: `docs/project/ARCHITECTURE_OVERVIEW.md`
-- **System Explanation**: `docs/project/QUANTUM_SYSTEM_EXPLANATION.md`
-- **Roadmap**: `docs/project/ROADMAP.md`
-- **Module READMEs**: Each system has its own README in its directory
-
-## Requirements
-
-- Python 3.7+
-- numpy
-
-## Key Principles
-
-- **Clear separation**: Each system maintains its own namespace
-- **No quantum confusion**: All documentation clearly states "NOT a quantum computer" (for islands/hierarchical)
-- **Professional structure**: Follows best practices for research software
-- **Architectural purity**: Real physics (livnium_core) separate from quantum-inspired systems
-
-## License
-
-[Add your license here]
+**A breakthrough computational architecture combining quantum-inspired geometry, native language processing, and tensor network physics.**
 
 ---
 
-*LIVNIUM: Quantum-inspired classical systems and real tensor network physics*
+## 🌟 What is LIVNIUM?
+
+LIVNIUM is a **pure native computing system** that processes language and information through geometric quantum-inspired structures—**without transformers, embeddings, or neural networks**. It represents a fundamental departure from conventional deep learning approaches.
+
+### Core Innovation: The Livnium Phoneme Layer
+
+**Letter-by-letter chained omcubes** form the atomic foundation:
+
+- **Letters** → Individual 3×3×3 quantum geometries (`LetterOmcube`)
+- **Words** → Chains of entangled letters (`WordChain`)
+- **Sentences** → Chains of word-chains (`SentenceChain`)
+
+This creates **natural morphological similarity**, **compositional meaning**, and **stable memory** through shared letter-level learning—like DNA built from nucleotide chains.
+
+---
+
+## 🚀 Key Features
+
+### ✅ Pure Native Architecture
+- **Zero Transformers**: No BERT, GPT, or any neural language models
+- **Zero Embeddings**: No pre-trained word vectors or sentence transformers
+- **Zero External Dependencies**: Pure geometric physics and native logic
+- **100% Interpretable**: Every decision is traceable through geometric structures
+
+### ✅ Quantum-Inspired Geometry
+- **3×3×3 Omcubes**: Each letter/word encoded as a quantum-inspired geometric structure
+- **Matrix Product States (MPS)**: Sentence-level entanglement through chained omcubes
+- **Quantum Collapse**: 3-way decision making (Entailment/Contradiction/Neutral)
+- **Basin Reinforcement**: Physics-based learning through geometric feedback
+
+### ✅ Research-Grade Systems
+- **Livnium Core**: Real tensor network physics (DMRG/MPS) for quantum many-body problems
+- **Islands System**: Quantum-inspired information processing (105-500+ qubit-analogues)
+- **Hierarchical System**: Geometry-in-geometry architecture (5000+ qubit-analogue capacity)
+- **NLI System**: Natural Language Inference using pure geometric reasoning
+
+---
+
+## 📐 Architecture Overview
+
+### The Livnium Phoneme Layer (Letter-by-Letter Encoding)
+
+```
+Letter → LetterOmcube (3×3×3 geometry)
+  ↓
+Word → WordChain (chained LetterOmcubes)
+  ↓
+Sentence → SentenceChain (chained WordChains)
+  ↓
+Meaning → Emergent from geometric interactions
+```
+
+**Why This Works:**
+- **Morphological Understanding**: "run" and "running" share letters → geometric overlap
+- **Stable Memory**: Letter-level learning shared across entire language
+- **Compositional Semantics**: Word meaning emerges from letter chains
+- **Zero Magic**: Everything is reversible, hash-based, structural
+
+### System Components
+
+1. **`native_chain.py`**: Core MPS architecture
+   - `LetterOmcube`: Atomic letter geometry
+   - `WordChain`: Letter entanglement
+   - `SentenceChain`: Word-level chains
+   - `GlobalLexicon`: Persistent letter-level memory
+
+2. **`inference_detectors.py`**: Native logic engine
+   - Lexical overlap detection
+   - Negation detection
+   - Semantic gap analysis
+   - Double negative handling
+
+3. **`omcube.py`**: Quantum collapse engine
+   - 3-way classification (E/C/N)
+   - Basin reinforcement learning
+   - Cross-omcube coupling
+   - Geometric feedback
+
+4. **`train_moksha_nli.py`**: Complete training pipeline
+   - Native Chain encoding
+   - Quantum collapse classification
+   - Moksha convergence detection
+   - Reward-only learning
+
+---
+
+## 🔬 Research Applications
+
+### Natural Language Inference (NLI)
+- **Task**: Classify premise-hypothesis pairs as Entailment, Contradiction, or Neutral
+- **Approach**: Pure geometric reasoning with zero neural networks
+- **Status**: Functional 3-way collapse with physics-based learning
+
+### Ramsey Number Solving
+- **Task**: Find maximum clique-free graphs
+- **Approach**: Geometric basin search with dynamic tension
+- **Status**: Operational with checkpoint system
+
+### Quantum Many-Body Physics
+- **Task**: Solve 1D Transverse Field Ising Model ground states
+- **Approach**: Real DMRG/MPS tensor network methods
+- **Status**: Production-ready physics solver
+
+---
+
+## 💡 Why This Matters
+
+### The Problem with Current AI
+- **Black Boxes**: Neural networks are uninterpretable
+- **Data Dependency**: Requires massive training datasets
+- **Computational Cost**: Expensive GPU clusters
+- **No True Understanding**: Pattern matching, not reasoning
+
+### The LIVNIUM Approach
+- **Transparent**: Every decision is geometrically traceable
+- **Data Efficient**: Learns from structure, not just statistics
+- **Lightweight**: Runs on CPU, no GPU required
+- **True Compositionality**: Meaning emerges from atomic units
+
+### Research Significance
+This represents a **fundamental alternative** to transformer-based AI:
+- **Geometric Computing**: Information as geometry, not vectors
+- **Native Logic**: Built-in reasoning, not learned patterns
+- **Physics-Based Learning**: Reinforcement through geometric feedback
+- **Compositional Semantics**: Meaning from structure, not statistics
+
+---
+
+## 🛠️ Quick Start
+
+### Installation
+
+```bash
+git clone <repository-url>
+cd clean-nova-livnium
+python3 -m venv .venv
+source .venv/bin/activate
+pip install numpy
+```
+
+### Run NLI Training
+
+```bash
+# Clean start (removes all caches)
+python3 experiments/nli/train_moksha_nli.py --clean --train 20000 --test 2000 --dev 2000
+```
+
+### Test Golden Label Collapse
+
+```bash
+# Verify 3-way collapse mechanism
+python3 experiments/nli/test_golden_label_collapse.py --clean
+```
+
+### Run Ramsey Solver
+
+```bash
+python3 experiments/ramsey/run_ramsey_experiment.py
+```
+
+---
+
+## 📚 Documentation
+
+- **Architecture**: `core/README.md` - Core system architecture
+- **NLI System**: `experiments/nli/DIAGNOSTIC_REPORT.md` - Complete diagnostic
+- **Ramsey Solver**: `experiments/ramsey/README.md` - Ramsey number solving
+- **Universal Encoder**: `core/Universal Encoder/README.md` - Constraint encoding
+
+---
+
+## 🏗️ Project Structure
+
+```
+clean-nova-livnium/
+├── core/                          # Core Livnium systems
+│   ├── classical/                 # Classical geometry engine
+│   ├── quantum/                   # Quantum layer
+│   ├── Universal Encoder/         # Constraint problem encoding
+│   └── search/                    # Multi-basin search
+│
+├── experiments/
+│   ├── nli/                       # Natural Language Inference
+│   │   ├── native_chain.py        # Letter-by-letter MPS architecture
+│   │   ├── omcube.py              # Quantum collapse engine
+│   │   ├── inference_detectors.py # Native logic
+│   │   └── train_moksha_nli.py    # Training pipeline
+│   │
+│   └── ramsey/                    # Ramsey number solving
+│       └── ramsey_dynamic_search.py
+│
+└── archive/                       # Historical implementations
+```
+
+---
+
+## 🔬 Key Principles
+
+### 1. **Geometric Computing**
+Information is encoded as **3D geometric structures**, not high-dimensional vectors. This enables:
+- Visual interpretability
+- Structural reasoning
+- Compositional semantics
+
+### 2. **Native Logic**
+Built-in reasoning capabilities through:
+- Lexical overlap detection
+- Negation handling
+- Semantic gap analysis
+- Double negative resolution
+
+### 3. **Physics-Based Learning**
+Learning through **geometric feedback**, not gradient descent:
+- Basin reinforcement (deepening correct attractors)
+- Natural decay (forgetting incorrect patterns)
+- Reward-only learning (no punishment)
+
+### 4. **Compositional Architecture**
+Meaning emerges from structure:
+- Letters → Words → Sentences
+- Atomic units → Complex structures
+- Local interactions → Global understanding
+
+---
+
+## ⚠️ Important Notes
+
+### Experimental Research Software
+**This is experimental research software.** It is:
+- ✅ Suitable for research and education
+- ✅ Designed for understanding novel computational approaches
+- ❌ NOT production-ready
+- ❌ NOT guaranteed to be error-free
+- ❌ NOT suitable for commercial deployment without licensing
+
+### Quantum-Inspired vs. Real Quantum
+- **Livnium Core**: Uses real tensor network physics (MPS/DMRG)
+- **Islands/Hierarchical**: Quantum-inspired classical systems (NOT physical quantum computers)
+- **NLI System**: Pure geometric computing with quantum-inspired collapse
+
+---
+
+## 📋 Requirements
+
+- **Python**: 3.7+
+- **Core Dependencies**: `numpy`
+- **Optional**: For faster performance, `numba` (JIT compilation)
+
+---
+
+## 📄 License
+
+This project is licensed under the **Livnium License v1.1 (Fortress Grade)** - a proprietary research license.
+
+### Quick Summary
+- ✅ **Permitted**: Personal, non-commercial, research, and educational use
+- ❌ **Prohibited**: Commercial use, redistribution, derivative works, AI training, public hosting, reverse engineering
+- 🔒 **Commercial Rights**: Reserved exclusively by the Owner
+- 🛡️ **Fortress Grade**: Includes protections against AI model training, data extraction, and public hosting
+
+For full license terms, see [LICENSE](LICENSE) or [LICENSE.md](LICENSE.md).
+
+**For commercial licensing inquiries**, please contact: chetanxpatil@users.noreply.github.com
+
+---
+
+## 🤝 Contributing
+
+This is a research project. Contributions are welcome for:
+- Bug fixes
+- Documentation improvements
+- Research discussions
+
+**Note**: All contributions become the exclusive property of the Owner per the License terms.
+
+---
+
+## 📧 Contact
+
+**Chetan Patil**  
+Email: chetanxpatil@users.noreply.github.com
+
+For research collaborations, commercial licensing, or technical inquiries.
+
+---
+
+## 🌟 Vision
+
+LIVNIUM represents a **fundamental rethinking** of how computers can understand language and information:
+
+- **From Vectors to Geometry**: Information as spatial structures
+- **From Statistics to Structure**: Meaning from composition, not correlation
+- **From Black Boxes to Transparency**: Every decision is traceable
+- **From Data to Physics**: Learning through geometric feedback
+
+This is not just another AI system—it's a **new computational paradigm**.
+
+---
+
+*"Information is geometry. Understanding is structure. Intelligence is composition."*
+
+**LIVNIUM: Where quantum-inspired geometry meets native language understanding.**

@@ -10,6 +10,8 @@ Usage:
 
 import os
 import sys
+import argparse
+import shutil
 import numpy as np
 from typing import Dict, List, Tuple
 
@@ -201,8 +203,86 @@ def print_feedback_results(results: List[Dict]):
         print()
 
 
+def clean_all_caches(nli_dir: str = None):
+    """
+    Complete clean: Remove all caches, compiled files, and persistent state.
+    """
+    if nli_dir is None:
+        nli_dir = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+    
+    print("="*70)
+    print("COMPLETE CLEAN: Removing all caches and persistent state")
+    print("="*70)
+    print()
+    
+    # 1. Clear in-memory state
+    print("Clearing in-memory state...")
+    GlobalLexicon().clear()
+    print("  ✓ GlobalLexicon cleared")
+    
+    # 2. Remove __pycache__ directories
+    print("Removing Python cache directories...")
+    cache_count = 0
+    cache_paths = []
+    
+    for root, dirs, files in os.walk(nli_dir):
+        if '__pycache__' in dirs:
+            cache_path = os.path.join(root, '__pycache__')
+            cache_paths.append(cache_path)
+            dirs.remove('__pycache__')
+    
+    for cache_path in cache_paths:
+        try:
+            shutil.rmtree(cache_path)
+            cache_count += 1
+            rel_path = os.path.relpath(cache_path, nli_dir)
+            print(f"  ✓ Removed: {rel_path}")
+        except Exception as e:
+            print(f"  ⚠️  Failed to remove {cache_path}: {e}")
+    
+    if cache_count == 0:
+        print("  ✓ No cache directories found")
+    else:
+        print(f"  ✓ Removed {cache_count} cache directory/ies")
+    
+    # 3. Remove .pyc, .pyo files
+    print("Removing compiled Python files...")
+    pyc_count = 0
+    for root, dirs, files in os.walk(nli_dir):
+        dirs[:] = [d for d in dirs if d != '__pycache__']
+        for file in files:
+            if file.endswith(('.pyc', '.pyo')):
+                file_path = os.path.join(root, file)
+                try:
+                    os.remove(file_path)
+                    pyc_count += 1
+                except Exception as e:
+                    print(f"  ⚠️  Failed to remove {file_path}: {e}")
+    
+    if pyc_count == 0:
+        print("  ✓ No compiled files found")
+    else:
+        print(f"  ✓ Removed {pyc_count} compiled file(s)")
+    
+    print()
+    print("="*70)
+    print("CLEAN COMPLETE: All caches and persistent state removed")
+    print("="*70)
+    print()
+
+
 def main():
     """Run golden label collapse tests."""
+    # Parse arguments
+    parser = argparse.ArgumentParser(description='Test golden label collapse behavior')
+    parser.add_argument('--clean', action='store_true', help='Start with clean state (clear all caches)')
+    args = parser.parse_args()
+    
+    # Clean if requested
+    if args.clean:
+        nli_dir = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+        clean_all_caches(nli_dir)
+    
     print("="*80)
     print("GOLDEN LABEL COLLAPSE DIAGNOSTIC")
     print("="*80)
