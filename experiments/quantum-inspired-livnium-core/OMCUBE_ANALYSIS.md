@@ -1,10 +1,10 @@
-# Qubit Type Analysis: Logical vs Physical
+# Omcube Type Analysis: Logical vs Physical
 
-## Current Implementation: **Simulated Logical Qubits**
+## Current Implementation: **Simulated Logical Omcubes**
 
 ### What We Have: Perfect, Error-Free Simulation
 
-The current quantum implementation acts like **logical qubits** (error-corrected, perfect), but it's actually a **classical simulation** of ideal quantum mechanics.
+The current quantum implementation acts like **logical omcubes** (error-corrected, perfect), but it's actually a **classical simulation** of ideal quantum mechanics.
 
 #### Evidence:
 
@@ -18,7 +18,7 @@ The current quantum implementation acts like **logical qubits** (error-corrected
    - ❌ No T2 decoherence (dephasing)
    - ❌ No gate errors (perfect unitaries)
    - ❌ No measurement errors (perfect readout)
-   - ❌ No crosstalk between qubits
+   - ❌ No crosstalk between omcubes
 
 3. **Perfect Operations**
    - ✅ Unitaries applied exactly: `U @ amplitudes` (no errors)
@@ -33,7 +33,7 @@ The current quantum implementation acts like **logical qubits** (error-corrected
 
 ### Comparison Table
 
-| Property | Physical Qubits | Logical Qubits | **Our Implementation** |
+| Property | Physical Qubits | Logical Qubits | **Our Implementation (Omcubes)** |
 |----------|----------------|----------------|----------------------|
 | **Error Rate** | ~10⁻³ per gate | ~10⁻¹² per gate | **0 (perfect)** |
 | **Coherence Time** | ~100 μs | Infinite (with EC) | **Infinite** |
@@ -52,29 +52,29 @@ The current quantum implementation acts like **logical qubits** (error-corrected
 
 #### ⚠️ Limitations (Why It's Not Real Quantum)
 - **Classical simulation**: Running on classical computer
-- **Exponential memory**: 2^n states for n qubits (but recursive compression helps)
+- **Exponential memory**: 2^n states for n omcubes (but recursive compression helps)
 - **No quantum speedup**: Still polynomial time, not exponential
 - **Perfect idealization**: Real quantum computers have errors
 
-### The 2.5 Million "Qubits"
+### The 2.5 Million Omcubes
 
-These are **simulated logical qubits**:
+These are **simulated logical omcubes**:
 - ✅ Error-free (like logical qubits)
 - ✅ Perfect coherence (like logical qubits)
 - ✅ But simulated classically (not real quantum)
 
-**Capacity**: 2,555,000 simulated logical qubits
-- This is the **logical qubit capacity** of the recursive geometry
-- Each qubit is perfect (no errors)
+**Capacity**: 2,555,000 simulated logical omcubes
+- This is the **logical omcube capacity** of the recursive geometry
+- Each omcube is perfect (no errors)
 - But it's a simulation, not a real quantum computer
 
-### If We Wanted Physical Qubits
+### If We Wanted Physical Omcubes
 
-To simulate **physical qubits** (noisy), we would need:
+To simulate **physical omcubes** (noisy), we would need:
 
 1. **Noise Models**
    ```python
-   class PhysicalQubit(QuantumCell):
+   class PhysicalOmcube(QuantumCell):
        t1: float = 100e-6  # Relaxation time (seconds)
        t2: float = 50e-6   # Dephasing time (seconds)
        gate_error_rate: float = 0.001  # 0.1% per gate
@@ -99,19 +99,19 @@ To simulate **physical qubits** (noisy), we would need:
 
 3. **Error Correction**
    ```python
-   class LogicalQubit:
-       physical_qubits: List[PhysicalQubit]  # 9-49 physical qubits
+   class LogicalOmcube:
+       physical_omcubes: List[PhysicalOmcube]  # 9-49 physical omcubes
        error_correction_code: SurfaceCode
        
        def apply_logical_gate(self, gate):
-           # Apply to physical qubits
+           # Apply to physical omcubes
            # Measure syndromes
            # Correct errors
    ```
 
-### Current Status: **Ideal Logical Qubits (Simulated)**
+### Current Status: **Ideal Logical Omcubes (Simulated)**
 
-**Answer**: The 2.5 million qubits are **simulated logical qubits**:
+**Answer**: The 2.5 million omcubes are **simulated logical omcubes**:
 - ✅ Error-free (like logical qubits)
 - ✅ Perfect coherence (like logical qubits)  
 - ✅ But classical simulation (not real quantum)
@@ -129,5 +129,5 @@ With real quantum hardware, we'd need:
 - **~100,000-1,000,000 physical qubits** (to encode logical qubits with error correction)
 - **Error correction overhead**: ~100-1000x more physical qubits
 
-Our simulation gives us the **logical qubit capacity** directly, without the physical qubit overhead.
+Our simulation gives us the **logical omcube capacity** directly, without the physical qubit overhead.
 

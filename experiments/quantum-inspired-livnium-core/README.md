@@ -13,7 +13,7 @@ This directory contains quantum-related experiments and tests using the Livnium 
 - **`aes128_round_sweep_experiment_livnium.py`**: AES-128 round sweep experiment using full Livnium architecture (recursive geometry + quantum layer + tension fields)
 
 ### Documentation
-- **`QUBIT_ANALYSIS.md`**: Analysis of omcube types (logical vs physical) in the Livnium implementation
+- **`OMCUBE_ANALYSIS.md`**: Analysis of omcube types (logical vs physical) in the Livnium implementation
 
 ## Key Features
 
