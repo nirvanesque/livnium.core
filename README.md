@@ -198,6 +198,12 @@ Meaning → Emergent from geometric interactions
 - **Approach**: Real DMRG/MPS tensor network methods
 - **Status**: Production-ready physics solver
 
+### Quantum-Inspired Cryptanalysis
+- **Task**: Explore AES-128 key space using quantum superposition
+- **Approach**: Recursive geometry + quantum layer + tension fields
+- **Status**: Phase transition measurement (2-3 rounds breakable, 4+ rounds hit geometric cliff)
+- **Capacity**: 2.5M logical qubits, 125+ entangled qubits simultaneously
+
 ---
 
 ## 💡 Why This Matters
@@ -270,6 +276,22 @@ python3 experiments/nli/test_golden_label_collapse.py --clean
 python3 experiments/ramsey/run_ramsey_experiment.py
 ```
 
+### Test Quantum-Inspired Capabilities
+
+```bash
+# Test recursive qubit capacity (2.5M qubits)
+python3 experiments/quantum-inspired-livnium-core/test_recursive_qubit_capacity.py
+
+# Test entanglement capacity
+python3 experiments/quantum-inspired-livnium-core/test_entanglement_capacity.py
+
+# Run quantum-enhanced AES topology mapper
+python3 experiments/quantum-inspired-livnium-core/aes128_quantum_topology_mapper.py
+
+# Run quantum AES round sweep experiment
+python3 experiments/quantum-inspired-livnium-core/aes128_round_sweep_experiment_livnium.py
+```
+
 ---
 
 ## 📚 Documentation
@@ -278,6 +300,7 @@ python3 experiments/ramsey/run_ramsey_experiment.py
 - **NLI System**: `experiments/nli/DIAGNOSTIC_REPORT.md` - Complete diagnostic
 - **Ramsey Solver**: `experiments/ramsey/README.md` - Ramsey number solving
 - **Universal Encoder**: `core/Universal Encoder/README.md` - Constraint encoding
+- **Quantum Experiments**: `experiments/quantum-inspired-livnium-core/README.md` - Quantum-enhanced experiments
 
 ---
 
@@ -298,8 +321,18 @@ livnium.core/
 │   │   ├── inference_detectors.py # Native logic
 │   │   └── train_moksha_nli.py    # Training pipeline
 │   │
-│   └── ramsey/                    # Ramsey number solving
-│       └── ramsey_dynamic_search.py
+│   ├── ramsey/                    # Ramsey number solving
+│   │   └── ramsey_dynamic_search.py
+│   │
+│   ├── crypto/                    # Classical cryptanalysis
+│   │   ├── aes128_base.py         # AES-128 implementation
+│   │   └── aes128_round_sweep_experiment.py  # Classical round sweep
+│   │
+│   └── quantum-inspired-livnium-core/  # Quantum-enhanced experiments
+│       ├── test_recursive_qubit_capacity.py      # 2.5M qubit capacity test
+│       ├── test_entanglement_capacity.py         # Entanglement capacity test
+│       ├── aes128_quantum_topology_mapper.py     # Quantum topology mapper
+│       └── aes128_round_sweep_experiment_livnium.py  # Quantum round sweep
 │
 └── archive/                       # Historical implementations
 ```
