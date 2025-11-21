@@ -62,6 +62,118 @@ class NativeLogic:
         subset_score = len(set2 & set1) / len(set2) if len(set2) > 0 else 0.0
         return (jaccard + subset_score) / 2.0
 
+    @staticmethod
+    def detect_negation_geometric(encoded_pair) -> Tuple[bool, float]:
+        """
+        Detect negation using geometric opposition (METHOD 1).
+        
+        Returns:
+            (has_negation, opposition_strength)
+            - has_negation: True if geometric opposition detected
+            - opposition_strength: How strong the opposition is [0, 1]
+        """
+        resonance = encoded_pair.get_resonance()
+        
+        # Negative resonance = geometric opposition = likely negation
+        if resonance < -0.2:
+            return (True, abs(resonance))
+        
+        # Low resonance with high overlap = semantic gap = possible negation
+        p_tokens = encoded_pair.premise_chain.tokens
+        h_tokens = encoded_pair.hypothesis_chain.tokens
+        overlap = NativeLogic.compute_overlap(p_tokens, h_tokens)
+        
+        if overlap > 0.4 and resonance < 0.3:
+            # High overlap but low resonance = contradiction/negation
+            opposition = (0.3 - resonance) / 0.3  # Normalize to [0, 1]
+            return (True, opposition)
+        
+        return (False, 0.0)
+
+    @staticmethod
+    def detect_negation_word_level(encoded_pair) -> Tuple[bool, float]:
+        """
+        Detect negation using word-level geometric opposition (METHOD 2).
+        
+        Checks if specific word pairs have negative geometric similarity,
+        especially when one word is a negation word.
+        
+        Returns:
+            (has_negation, opposition_strength)
+        """
+        premise_chain = encoded_pair.premise_chain
+        hypothesis_chain = encoded_pair.hypothesis_chain
+        
+        # Known negation words (for fallback, but we prefer geometric detection)
+        negation_words = {'not', 'no', 'never', 'nothing', 'none', 'neither', 'nowhere', 
+                         "n't", 'cannot', "can't", "won't", "don't", "doesn't", "didn't", 
+                         "isn't", "aren't", "wasn't", "weren't"}
+        
+        max_opposition = 0.0
+        has_negation_word = False
+        
+        # Check each word pair for geometric opposition
+        for h_word_chain in hypothesis_chain.word_chains:
+            h_geo = h_word_chain.get_geometry_vector()
+            h_word = h_word_chain.word
+            
+            # Check if this is a negation word
+            if h_word in negation_words:
+                has_negation_word = True
+            
+            for p_word_chain in premise_chain.word_chains:
+                p_geo = p_word_chain.get_geometry_vector()
+                
+                # Compute geometric similarity
+                dot_prod = np.dot(p_geo, h_geo)
+                norm_p = np.linalg.norm(p_geo)
+                norm_h = np.linalg.norm(h_geo)
+                
+                if norm_p > 0 and norm_h > 0:
+                    geo_sim = dot_prod / (norm_p * norm_h)
+                    
+                    # Negative similarity = opposition
+                    if geo_sim < 0:
+                        opposition = abs(geo_sim)
+                        max_opposition = max(max_opposition, opposition)
+        
+        # If we found geometric opposition, or negation word with any opposition
+        if max_opposition > 0.2 or (has_negation_word and max_opposition > 0.1):
+            return (True, min(1.0, max_opposition))
+        
+        return (False, 0.0)
+
+    @staticmethod
+    def detect_negation_resonance_pattern(encoded_pair) -> Tuple[bool, float]:
+        """
+        Detect negation using resonance patterns (METHOD 3).
+        
+        Pattern: High overlap + negative/low resonance = negation
+        Pattern: Negative resonance = direct geometric opposition
+        
+        Returns:
+            (has_negation, confidence)
+        """
+        resonance = encoded_pair.get_resonance()
+        p_tokens = encoded_pair.premise_chain.tokens
+        h_tokens = encoded_pair.hypothesis_chain.tokens
+        overlap = NativeLogic.compute_overlap(p_tokens, h_tokens)
+        
+        # Pattern 1: Direct negative resonance
+        if resonance < -0.15:
+            return (True, min(1.0, abs(resonance) * 2.0))
+        
+        # Pattern 2: High overlap but very low resonance (semantic gap)
+        if overlap > 0.5 and resonance < 0.2:
+            gap = (0.5 - resonance) / 0.5  # Normalize
+            return (True, gap * 0.8)  # Slightly lower confidence
+        
+        # Pattern 3: Moderate overlap but negative resonance
+        if overlap > 0.3 and resonance < 0.0:
+            return (True, abs(resonance) * 1.5)
+        
+        return (False, 0.0)
+
 
 class EntailmentDetector:
     """Detect entailment using positive resonance."""
@@ -78,7 +190,23 @@ class EntailmentDetector:
         h_tokens = self.encoded_pair.hypothesis_chain.tokens
         
         overlap = NativeLogic.compute_overlap(p_tokens, h_tokens)
-        has_negation = NativeLogic.detect_negation(h_tokens)
+        
+        # GEOMETRIC NEGATION DETECTION (replaces lexical hack)
+        has_negation_geo, geo_opposition = NativeLogic.detect_negation_geometric(self.encoded_pair)
+        has_negation_word, word_opposition = NativeLogic.detect_negation_word_level(self.encoded_pair)
+        has_negation_res, res_confidence = NativeLogic.detect_negation_resonance_pattern(self.encoded_pair)
+        
+        # Combine geometric signals (any method detecting negation = negation)
+        has_negation = has_negation_geo or has_negation_word or has_negation_res
+        opposition_strength = max(geo_opposition, word_opposition, res_confidence)
+        
+        # Fallback to lexical for edge cases (but prefer geometric)
+        has_negation_lexical = NativeLogic.detect_negation(h_tokens)
+        if has_negation_lexical and not has_negation:
+            # Lexical detected but geometric didn't - use lexical as fallback
+            has_negation = True
+            opposition_strength = 0.5  # Medium confidence for lexical-only
+        
         is_double_negative = NativeLogic.detect_double_negative(p_tokens, h_tokens)
         
         # FIX: Double negative detection using semantic heuristic
@@ -124,9 +252,24 @@ class ContradictionDetector:
         h_tokens = self.encoded_pair.hypothesis_chain.tokens
         
         overlap = NativeLogic.compute_overlap(p_tokens, h_tokens)
-        has_negation = NativeLogic.detect_negation(h_tokens)
+        
+        # GEOMETRIC NEGATION DETECTION (replaces lexical hack)
+        has_negation_geo, geo_opposition = NativeLogic.detect_negation_geometric(self.encoded_pair)
+        has_negation_word, word_opposition = NativeLogic.detect_negation_word_level(self.encoded_pair)
+        has_negation_res, res_confidence = NativeLogic.detect_negation_resonance_pattern(self.encoded_pair)
+        
+        # Combine geometric signals (any method detecting negation = negation)
+        has_negation = has_negation_geo or has_negation_word or has_negation_res
+        opposition_strength = max(geo_opposition, word_opposition, res_confidence)
+        
+        # Fallback to lexical for edge cases (but prefer geometric)
+        has_negation_lexical = NativeLogic.detect_negation(h_tokens)
+        if has_negation_lexical and not has_negation:
+            # Lexical detected but geometric didn't - use lexical as fallback
+            has_negation = True
+            opposition_strength = 0.5  # Medium confidence for lexical-only
+        
         is_double_negative = NativeLogic.detect_double_negative(p_tokens, h_tokens)
-        resonance = self.encoded_pair.get_resonance()
         
         # FIX: Double negative detection using semantic heuristic
         # If high resonance (>0.7) + negation + high overlap → likely double negative (entailment)
