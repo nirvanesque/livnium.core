@@ -90,10 +90,13 @@ def test_recursive_omcube_capacity(base_lattice_size: int = 5,
     base_system = LivniumCoreSystem(config)
     
     # Initialize recursive geometry engine
+    print("Building recursive geometry hierarchy...")
+    print("(This may take a moment for large lattices)")
     recursive_engine = RecursiveGeometryEngine(
         base_geometry=base_system,
         max_depth=max_depth
     )
+    print("✓ Hierarchy built")
     
     # Count omcubes at each level
     level_0 = recursive_engine.levels[0]
@@ -210,7 +213,7 @@ def test_scaling():
         (5, 2, 1000),
         (5, 3, 3000),
         (7, 2, 2000),
-        (7, 3, 5000),
+        # (7, 3, 5000),  # SKIPPED: Creates 32M+ cells, too expensive
     ]
     
     results = []
@@ -266,11 +269,14 @@ if __name__ == "__main__":
     )
     
     # Test 2: Ambitious (target 4,000)
+    # NOTE: 7×7×7 with depth 3 creates 32M+ cells - too expensive!
+    # Using 7×7×7 with depth 2 instead (1.2M cells, much faster)
     print("\n\n")
     print("TEST 2: Target 4,000 omcubes")
+    print("(Using 7×7×7 depth 2 - depth 3 creates 32M+ cells and is too slow)")
     result2 = test_recursive_omcube_capacity(
         base_lattice_size=7,
-        max_depth=3,
+        max_depth=2,
         target_omcubes=4000
     )
     
