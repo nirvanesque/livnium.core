@@ -181,36 +181,8 @@ class QuantumTopologyMapper:
                 cell.num_levels = 256
                 cell.normalize()
         
-        # Also initialize deeper levels with same key mapping (for parallel exploration)
-        # But use Level 0 coordinates as the canonical key representation
-        for level_id in range(1, len(quantum_lattices)):
-            if level_id in quantum_lattices:
-                ql = quantum_lattices[level_id]
-                # Initialize with same Gaussian distribution (parallel exploration)
-                for i, coords in enumerate(level_0_coords):
-                    # Map Level 0 coords to this level's coordinate system
-                    # For now, use first 16 cells of this level as proxy
-                    level_coords = list(recursive_engine.levels[level_id].geometry.lattice.keys())[:16]
-                    if i < len(level_coords) and level_coords[i] in ql.quantum_cells:
-                        cell = ql.quantum_cells[level_coords[i]]
-                        true_byte = true_key[i] if i < len(true_key) else 0
-                        
-                        amplitudes = np.zeros(256, dtype=complex)
-                        for val in range(256):
-                            dist = min(abs(val - true_byte), 256 - abs(val - true_byte))
-                            sigma = 10.0
-                            amplitude = np.exp(-(dist**2) / (2 * sigma**2))
-                            amplitudes[val] = amplitude
-                        
-                        norm = np.sqrt(np.sum(np.abs(amplitudes)**2))
-                        if norm > 1e-10:
-                            amplitudes /= norm
-                        else:
-                            amplitudes[true_byte] = 1.0
-                        
-                        cell.amplitudes = amplitudes
-                        cell.num_levels = 256
-                        cell.normalize()
+        # Note: Deeper levels are initialized but we only use Level 0 for key encoding
+        # This ensures consistent key space mapping across all samples
         
         # Sample from quantum superposition
         # ALWAYS use Level 0 coordinates for key encoding (consistent key space)
