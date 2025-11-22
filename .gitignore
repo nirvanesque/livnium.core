@@ -61,7 +61,7 @@ site/
 Thumbs.db
 
 # Archive (keep it but don't track changes)
-# archive/
+archive/
 *.tar.gz
 
 # Data files (large datasets)
