@@ -254,6 +254,22 @@ Contributions are welcome for bug fixes, documentation improvements, and researc
 
 **Note**: All contributions become part of the Livnium project per the License terms.
 
+### Coding Standards: Keep It Simple
+
+**We prioritize clarity and understanding over complexity.**
+
+- ✅ **Use simple, descriptive names** that clearly communicate purpose
+- ✅ **Make names resonate** - they should make sense in context
+- ✅ **Avoid unnecessarily complicated terminology** when simpler alternatives exist
+- ✅ **Prefer readability** - code should be self-documenting through good naming
+
+**Philosophy**: If someone can't understand what a function, class, or variable does from its name alone, it needs a better name. We want the codebase to be accessible and intuitive, not intimidating.
+
+Examples:
+- ✅ `measure_tension()` instead of `compute_geometric_energy_landscape_metric()`
+- ✅ `get_neighbors()` instead of `retrieve_adjacent_cell_coordinates()`
+- ✅ `refine_candidate()` instead of `apply_stochastic_optimization_heuristic()`
+
 ---
 
 ## 📧 Contact
