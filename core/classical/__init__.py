@@ -12,6 +12,7 @@ from .livnium_core_system import (
     CellClass,
     RotationGroup,
 )
+from .datacube import DataCube, DataCell
 
 __all__ = [
     'LivniumCoreSystem',
@@ -20,5 +21,7 @@ __all__ = [
     'RotationAxis',
     'CellClass',
     'RotationGroup',
+    'DataCube',
+    'DataCell',
 ]
 

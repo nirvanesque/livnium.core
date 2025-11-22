@@ -16,7 +16,7 @@ use, study, and contribute to the Software, subject to the following conditions:
    project and may be used, modified, or redistributed by the project owner.
 
 3. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 ---------------------------------------------------------------------------
@@ -73,6 +73,16 @@ This includes but is not limited to:
 
 All commercial rights related to the Livnium Axioms and derivative systems
 are exclusively reserved by the Owner.
+
+---------------------------------------------------------------------------
+Even-Dimensional Grids (DataCubes)
+---------------------------------------------------------------------------
+
+Even-dimensional grids (2×2×2, 4×4×4, 6×6×6, ...) are permitted for storage
+or data processing, but cannot implement any Livnium Axioms, Core Geometry,
+or Collapse Mechanics. These "DataCubes" are non-axiomatic resource containers
+and do not constitute Livnium computation. Only odd-dimensional grids
+(3×3×3, 5×5×5, 7×7×7, ...) can serve as Livnium Core Universes (Omcubes).
 
 You may NOT:
 

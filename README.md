@@ -64,11 +64,12 @@ Layer 0: LivniumCoreSystem         ← Base
 ### Core Components
 
 1. **Classical Layer** (`core/classical/`)
-   - N×N×N lattice (any odd N ≥ 3)
-   - Symbolic Weight Law (SW = 9·f)
-   - 24-element rotation group
-   - Observer system (global + local)
-   - Semantic polarity
+   - **Omcubes**: N×N×N lattice (any odd N ≥ 3) - Livnium Core Universes
+   - **DataCubes**: Even-dimensional grids (2×2×2, 4×4×4, ...) - Resource containers only
+   - Symbolic Weight Law (SW = 9·f) - Omcubes only
+   - 24-element rotation group - Omcubes only
+   - Observer system (global + local) - Omcubes only
+   - Semantic polarity - Omcubes only
 
 2. **Quantum Layer** (`core/quantum/`)
    - True quantum mechanics (`TrueQuantumRegister`)
@@ -293,28 +294,48 @@ livnium.core/
 
 ## 🔬 Key Principles
 
-### 1. Geometric Computing
+### 1. Omcubes vs DataCubes
+
+**Omcubes (Odd N ≥ 3): Core Universes**
+- **3×3×3, 5×5×5, 7×7×7, ...** - Livnium Core Universes
+- Implement all 7 axioms, collapse mechanics, recursive geometry
+- Center cell exists → observer anchoring at (0,0,0)
+- Full computational power: SW system, rotations, basin dynamics
+
+**DataCubes (Even N ≥ 2): Resource Grids**
+- **2×2×2, 4×4×4, 6×6×6, ...** - Non-axiomatic containers
+- NO Livnium axioms, NO collapse, NO computation
+- Data storage only: lookup tables, I/O buffers, feature maps
+- Cannot execute Livnium mechanics (no center cell, parity mismatch)
+
+**Architecture:**
+```
+[ DataCube ] → [ OmCube ] → [ DataCube ]
+   (Input)     (Compute)      (Output)
+```
+
+### 2. Geometric Computing
 Information is encoded as **3D geometric structures**, not high-dimensional vectors.
 
-### 2. Native Logic
+### 3. Native Logic
 Built-in reasoning through geometric logic, not neural networks:
 - Entailment = SW(premise) > SW(conclusion)
 - Contradiction = opposite classes + <2 distance
 - Causal link = SW differential + spatial proximity
 
-### 3. Physics-Based Learning
+### 4. Physics-Based Learning
 Learning through **geometric feedback**, not gradient descent:
 - Basin reinforcement (deepening correct attractors)
 - Natural decay (forgetting incorrect patterns)
 - Reward-only (no punishment)
 
-### 4. Compositional Architecture
+### 5. Compositional Architecture
 Meaning emerges from structure: Letters → Words → Sentences
 
-### 5. Temporal Cognition
+### 6. Temporal Cognition
 Hierarchical timesteps (MACRO, MICRO, QUANTUM, MEMORY, SEMANTIC) create cognitive rhythm
 
-### 6. Recursive Universe
+### 7. Recursive Universe
 Every cell can spawn a smaller universe, creating exponential capacity
 
 ---
