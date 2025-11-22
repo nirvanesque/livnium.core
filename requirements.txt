@@ -1,0 +1,10 @@
+# Livnium Core - Requirements
+# Python 3.7+ required
+
+# Core Dependencies (Required)
+numpy>=1.19.0
+
+# Optional Dependencies
+# Uncomment to enable JIT compilation for better performance (used in core/classical/livnium_core_system.py)
+# numba>=0.56.0
+
