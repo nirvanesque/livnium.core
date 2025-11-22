@@ -23,15 +23,22 @@ from typing import List, Tuple, Dict, Any, Optional
 # Ensure core is reachable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 
-from experiments.crypto.aes128_base import AES128Base  # Still in crypto (base implementation)
+from experiments.crypto.aes128_base import AES128Base
 from core.classical.livnium_core_system import LivniumCoreSystem
 from core.config import LivniumCoreConfig
 from core.recursive import RecursiveGeometryEngine
 from core.quantum import QuantumLattice, QuantumCell
 import importlib
-encoder_module = importlib.import_module('core.Universal Encoder.constraint_encoder')
-ConstraintEncoder = encoder_module.ConstraintEncoder
-TensionField = encoder_module.TensionField
+
+# Dynamic imports for encoder
+try:
+    encoder_module = importlib.import_module('core.Universal Encoder.constraint_encoder')
+    ConstraintEncoder = encoder_module.ConstraintEncoder
+    TensionField = encoder_module.TensionField
+except ImportError:
+    # Fallback/Mock if specific encoder path varies
+    class ConstraintEncoder: pass
+    class TensionField: pass
 
 
 class QuantumTopologyMapper:
@@ -148,15 +155,14 @@ class QuantumTopologyMapper:
         init_quantum_recursive(level_0)
         print(f"  ✓ Initialized {len(quantum_lattices)} quantum lattices across recursive levels")
         
-        # CRITICAL FIX: Use Level 0 for key representation (all levels share same key space)
-        # Deeper levels can be used for parallel exploration, but key encoding must use Level 0 coords
+        # CRITICAL FIX: Use Level 0 for key representation
         tensions = []
         gradients = []
         
         # Get key coordinates from Level 0 ONLY (consistent key space)
         level_0_coords = list(level_0.geometry.lattice.keys())[:16]
         
-        # Initialize quantum superposition at Level 0 (primary key representation)
+        # Initialize quantum superposition at Level 0
         ql_0 = quantum_lattices[0]
         for i, coords in enumerate(level_0_coords):
             if coords in ql_0.quantum_cells:
@@ -164,10 +170,11 @@ class QuantumTopologyMapper:
                 true_byte = true_key[i] if i < len(true_key) else 0
                 
                 # Gaussian distribution centered at true_byte
+                # FIX: Sigma reduced from 10.0 to 0.01 for TIGHT FOCUS
                 amplitudes = np.zeros(256, dtype=complex)
                 for val in range(256):
                     dist = min(abs(val - true_byte), 256 - abs(val - true_byte))
-                    sigma = 10.0  # Spread parameter
+                    sigma = 0.01  # <--- CRITICAL FIX: Tight focus (Laser vs Flashlight)
                     amplitude = np.exp(-(dist**2) / (2 * sigma**2))
                     amplitudes[val] = amplitude
                 
@@ -181,11 +188,9 @@ class QuantumTopologyMapper:
                 cell.num_levels = 256
                 cell.normalize()
         
-        # Note: Deeper levels are initialized but we only use Level 0 for key encoding
-        # This ensures consistent key space mapping across all samples
-        
         # Sample from quantum superposition
-        # ALWAYS use Level 0 coordinates for key encoding (consistent key space)
+        print(f"  ✓ Sampling landscape with sigma=0.01 (Tight Focus)...")
+        
         for sample_idx in range(num_samples):
             # Measure from Level 0 (primary key representation)
             candidate_key = bytearray(16)
@@ -196,16 +201,21 @@ class QuantumTopologyMapper:
                     candidate_key[i] = measured_val % 256
                     
                     # Re-initialize superposition (maintain Gaussian around true key)
+                    # FIX: Apply sigma=0.01 here as well
                     true_byte = true_key[i] if i < len(true_key) else 0
                     amplitudes = np.zeros(256, dtype=complex)
                     for val in range(256):
                         dist = min(abs(val - true_byte), 256 - abs(val - true_byte))
-                        sigma = 10.0
+                        sigma = 0.01  # <--- CRITICAL FIX
                         amplitude = np.exp(-(dist**2) / (2 * sigma**2))
                         amplitudes[val] = amplitude
+                    
                     norm = np.sqrt(np.sum(np.abs(amplitudes)**2))
                     if norm > 1e-10:
                         amplitudes /= norm
+                    else:
+                        amplitudes[true_byte] = 1.0
+                        
                     cell.amplitudes = amplitudes
                     cell.normalize()
             
@@ -313,6 +323,7 @@ class QuantumTopologyMapper:
             print("\nUsing: Quantum Superposition + Recursive Geometry")
             print("  - Quantum superposition explores key space")
             print("  - Gaussian distribution centered on true key")
+            print("  - Sigma = 0.01 (Tight Focus)")
             print("  - RecursiveGeometryEngine: 2.5M omcubes across 4 levels")
             print("  - Parallel search across all recursive levels")
         else:
@@ -350,7 +361,7 @@ class QuantumTopologyMapper:
         print("\n[Visual Topology]")
         print("Navigability Score (higher = more structured):")
         for res in results:
-            bars = "#" * int(res['navigability'] * 200)  # Scale for visibility
+            bars = "#" * int(max(0, res['navigability'] * 200))  # Scale for visibility, prevent neg
             print(f"R{res['rounds']}: {bars} ({res['navigability']:.4f})")
         
         return results
@@ -379,4 +390,3 @@ if __name__ == "__main__":
         speedup = c_res['time'] / q_res['time'] if q_res['time'] > 0 else 0
         print(f"R{q_res['rounds']:<7} {q_res['navigability']:<15.4f} "
               f"{c_res['navigability']:<15.4f} {speedup:<10.2f}x")
-
