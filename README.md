@@ -3,22 +3,6 @@
 
 **A computational architecture combining quantum-inspired geometry, native language processing, and tensor network physics.**
 
----
-
-## ⚠️ License: Source Available, Non-Commercial
-
-**This software is provided for PERSONAL, NON-COMMERCIAL, RESEARCH, and EDUCATIONAL PURPOSES ONLY.**
-
-- ✅ **Permitted**: Personal study, research, education, non-commercial use, contributions (with credit)
-- ❌ **Prohibited**: Commercial use, selling, hosting as a service, redistribution without permission
-- 🔒 **Commercial Rights**: Reserved exclusively by the Owner
-
-**Non-Commercial use includes only personal, academic, or research use by individuals. Use within any company or organization for internal purposes (including research, development, or evaluation) is considered commercial and requires prior written permission from the Owner.**
-
-See [LICENSE](LICENSE) for full terms. For commercial licensing inquiries: chetan12patil@gmail.com
-
----
-
 ## 🌟 What is LIVNIUM?
 
 LIVNIUM is a **pure native computing system** that processes language and information through geometric quantum-inspired structures—**without transformers, embeddings, or neural networks**.
@@ -368,7 +352,7 @@ This project is licensed under the **LIVNIUM License (MIT + Commons Clause)** - 
 
 **Non-Commercial use includes only personal, academic, or research use by individuals. Use within any company or organization for internal purposes (including research, development, or evaluation) is considered commercial and requires prior written permission from the Owner.**
 
-For full license terms, see [LICENSE](LICENSE) or [LICENSE.md](LICENSE.md).
+For full license terms, see [LICENSE](LICENSE).
 
 **For commercial licensing inquiries**: chetan12patil@gmail.com
 
