@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.idea_a.entangled_basins import (
+from core.internet.entangled_basins import (
     initialize_shared_system,
     process_to_basin,
     verify_correlation,
