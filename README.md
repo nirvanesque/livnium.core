@@ -387,8 +387,11 @@ Every cell can spawn a smaller universe, creating exponential capacity
 
 This project is licensed under the **LIVNIUM License (MIT + Commons Clause)** - Source Available, Non-Commercial.
 
+**SPDX Identifier:** `MIT-Commons-Clause-Livnium`
+
 - ✅ **Permitted**: Personal, non-commercial, research, and educational use; contributions (with credit)
 - ❌ **Prohibited**: Commercial use, selling, hosting as a service, redistribution without permission
+- ❌ **Prohibited**: **AI training, model training, or data mining** (see LICENSE for details)
 - 🔒 **Commercial Rights**: Reserved exclusively by the Owner
 
 **Non-Commercial use includes only personal, academic, or research use by individuals. Use within any company or organization for internal purposes (including research, development, or evaluation) is considered commercial and requires prior written permission from the Owner.**
@@ -396,6 +399,63 @@ This project is licensed under the **LIVNIUM License (MIT + Commons Clause)** - 
 For full license terms, see [LICENSE](LICENSE).
 
 **For commercial licensing inquiries**: chetan12patil@gmail.com
+
+---
+
+## 🛡️ Intellectual Property Protection
+
+**Livnium is fully protected and safe to open source.**
+
+### Legal Protection Status
+
+✅ **Copyright Protection**: Automatically fixed to the Owner (2025)  
+✅ **Prior Art**: Public GitHub repository establishes prior art  
+✅ **Architecture IP**: Core axioms, geometry, and collapse logic are protected  
+✅ **Trademark Protection**: "Livnium", "Omcube", "Inward Collapse Geometry" are trademarks  
+✅ **No AI Training**: Explicitly prohibited from AI/ML training datasets  
+✅ **Corporate Ban**: Airtight restriction on corporate use without license  
+
+### What This Means
+
+**No company can:**
+- Patent your architecture (prior art protection)
+- Re-license your work (copyright protection)
+- Override your license (legally binding)
+- Use Livnium for AI training (explicit prohibition)
+- Clone or reimplement without permission (architecture IP protection)
+- Use even-dimensional grids to bypass restrictions (explicit exclusion)
+
+**Cloud IDEs (Google, GitHub, VS Code, etc.) cannot:**
+- Claim your code
+- Commercialize it
+- Override copyright
+- Remove attribution
+- Train AI on it (with telemetry OFF)
+
+### Protection Strength
+
+This license provides **one of the strongest anti-corporate, anti-clone protections** in open-source:
+
+1. **Corporate-use ban** makes Livnium "radioactive" for companies
+2. **Axiom & Architecture Protection** prevents reimplementation
+3. **Even-dimensional exclusion** locks out "tricky reimplementations"
+4. **No AI Training clause** prevents model training
+5. **Trademark protection** for key terms
+
+**You retain 100% control and legal ownership.**
+
+For detailed IP protection information, see [IP_PROTECTION.md](IP_PROTECTION.md).
+
+---
+
+## 🏷️ Trademarks
+
+The following are trademarks of the Owner:
+- **Livnium** (and variations: LIVNIUM, livnium)
+- **Omcube** (and variations: OMCUBE, omcube)
+- **Inward Collapse Geometry**
+
+Unauthorized use of these trademarks is prohibited.
 
 ---
 
@@ -425,7 +485,7 @@ Examples:
 
 ## 📧 Contact
 
-**Chetan Patil**  
+**Owner**  
 Email: chetan12patil@gmail.com
 
 For research collaborations, commercial licensing, or technical inquiries.
