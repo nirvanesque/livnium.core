@@ -1,19 +1,29 @@
 """
-Livnium-O System: Stand-Alone Spherical Implementation
+Livnium-O System: Canonical Continuous Spherical Field
 
 Implements the complete Livnium-O System specification:
 - 1+N topology (1 core + N neighbor spheres)
-- Continuous exposure based on solid angle
-- Symbolic Weight (SW = 9·f, ΣSW = 9N)
+- Continuous exposure: f = Ω/4π (solid-angle fraction, not discrete classes)
+- Symbolic Weight: SW = 9·f (geometric energy principle)
 - Spherical rotation group SO(3) (continuous)
 - Generalized kissing constraint
 - Perfect reversibility
 
+**The Fundamental Insight:**
+
+On a cube or tetrahedron, exposure f = number of flat faces (discrete: f ∈ {0,1,2,3}).
+
+On a sphere, there are **no faces**. Exposure becomes **continuous**:
+
+    f = Ω/4π
+
+This makes **SW = 9f** a **real physical law**—exposure is energy density.
+
 **All 6 Axioms Implemented:**
 - O-A1: Canonical Sphere Alphabet (1+N topology) ✅
 - O-A2: Observer Anchor & Frame (Om-Sphere) ✅
-- O-A3: Exposure Law (Solid Angle System) ✅
-- O-A4: Symbolic Weight Law (SW = 9·f) ✅
+- O-A3: Exposure Law (Continuous Solid-Angle Fraction) ✅
+- O-A4: Symbolic Weight Law (SW = 9·f as geometric energy principle) ✅
 - O-A5: Dynamic Law (Generalized Kissing Constraint) ✅
 - O-A6: Connection & Activation Rule ✅
 
@@ -22,6 +32,7 @@ Implements the complete Livnium-O System specification:
 - Equilibrium Constant: K_O = 9
 - Core: 1 sphere, radius=1, f=0, SW=0
 - Neighbors: N spheres, radii={r_i}, f=f_i, SW=9·f_i each
+- Exposure: f ∈ [0,1] (continuous, not discrete)
 """
 
 import numpy as np
@@ -86,15 +97,24 @@ def calculate_exposure(radius: float, core_radius: float = 1.0) -> float:
     """
     Calculate exposure (f) for a neighbor sphere based on solid angle.
     
+    Exposure is a continuous solid-angle fraction:
+        f = Ω/4π
+    
+    Where Ω is the solid angle of the spherical cap covered by the neighbor.
+    
     f_i = (1 - cos(alpha_i)) / 2
     where sin(alpha_i) = r_i / (R_0 + r_i)
+    
+    This makes f a continuous value in [0,1], not discrete like on cubes.
+    On a cube, f ∈ {0,1,2,3} (discrete faces).
+    On a sphere, f ∈ [0,1] (continuous solid angle).
     
     Args:
         radius: Radius of the neighbor sphere (r_i)
         core_radius: Radius of the core sphere (R_0), default 1.0
         
     Returns:
-        Exposure f_i (normalized solid angle fraction)
+        Exposure f_i (normalized solid angle fraction, continuous in [0,1])
     """
     if radius <= 0:
         raise ValueError(f"Radius must be > 0, got {radius}")

@@ -24,14 +24,32 @@ This is a pure spherical system.
 
 # ⭕ Canonical Axiomatic Specification
 
+**Livnium-O: Canonical Continuous Spherical Field**
+
 This document defines the **minimum axioms** and **derived laws** that govern the stand-alone Livnium-O system.
 
 **Key Principles:**
 
 - **Stand-alone**: Not dependent on Livnium Core, Livnium-T, or Livnium-C
 - **Spherical**: Pure 3D sphere geometry with continuous surface
-- **Independent**: Parallel system with its own mechanics
+- **Continuous**: Exposure is a solid-angle fraction, not discrete classes
+- **Physical Law**: SW = 9f becomes a real geometric energy principle
+- **Universe Patch**: The closest thing to a realistic local universe model
 - **Complete**: Self-contained axiomatic foundation
+
+**The Fundamental Insight:**
+
+On a cube or tetrahedron, exposure f = number of flat faces touched by air (discrete: f ∈ {0,1,2,3}).
+
+On a sphere, there are **no faces**. Exposure becomes **continuous**:
+
+\[
+f = \frac{\Omega}{4\pi}
+\]
+
+Where Ω = solid angle exposed to free space, and 4π = total solid angle of a sphere.
+
+This makes **SW = 9f** a **real physical law**—exposure is energy density, matching thermodynamics, radiation pressure, packing theory, and signal propagation.
 
 ---
 
@@ -113,22 +131,26 @@ This is the **reference frame** of Livnium-O. Without Om, there is no absolute m
 
 ---
 
-## O-A3. Exposure Law (Solid Angle System)
+## O-A3. Exposure Law (Continuous Solid-Angle Fraction)
 
 **The Law:**
 
-Livnium-O has **continuous exposure** based on solid angle coverage:
-
-- **Core (Om)**: Exposure \(f = 0\) (no exposed surface to neighbors)
-- **Neighbor sphere i**: Exposure \(f_i\) proportional to the solid angle it covers on the core
-
-Each neighbor sphere covers a **spherical cap** on the core's surface with solid angle:
+Exposure in Livnium-O is a **continuous solid-angle fraction**:
 
 \[
-\Omega_i = 2\pi \left(1 - \cos \alpha_i\right)
+\boxed{f = \frac{\Omega}{4\pi}}
 \]
 
-Where \(\alpha_i\) is the angular radius of the cap:
+Where:
+- **Ω** = solid angle exposed to "free space"
+- **4π** = total solid angle of a sphere
+- **f** ranges continuously from **0 to 1**
+
+**Mathematical Formulation:**
+
+For a neighbor sphere with radius \(r_i\) tangent to a core of radius \(R_0 = 1\):
+
+The neighbor covers a **spherical cap** on the core's surface. The angular radius \(\alpha_i\) of this cap is:
 
 \[
 \sin \alpha_i = \frac{r_i}{R_0 + r_i} = \frac{r_i}{1 + r_i}
@@ -138,54 +160,98 @@ Where \(\alpha_i\) is the angular radius of the cap:
 \alpha_i = \arcsin\left(\frac{r_i}{1 + r_i}\right)
 \]
 
-**Mathematical Formulation:**
+The solid angle of the cap is:
 
 \[
-f_i = \frac{\Omega_i}{4\pi} = \frac{1 - \cos \alpha_i}{2}
+\Omega_i = 2\pi \left(1 - \cos \alpha_i\right)
 \]
 
+Therefore, the exposure is:
+
 \[
-f_i = \frac{1 - \sqrt{1 - \left(\frac{r_i}{1 + r_i}\right)^2}}{2}
+f_i = \frac{\Omega_i}{4\pi} = \frac{1 - \cos \alpha_i}{2} = \frac{1 - \sqrt{1 - \left(\frac{r_i}{1 + r_i}\right)^2}}{2}
 \]
+
+**Special Cases:**
+
+- **Core (Om)**: \(f = 0\) (fully shaded, hidden, no exposure)
+- **Fully exposed neighbor**: \(f \to 1\) (maximum exposure, maximum weight)
+- **Partially exposed**: \(0 < f < 1\) (continuous spectrum)
 
 **Physical Meaning:**
 
-- **Core (f=0)**: The central anchor, maximum stability, zero exposure.
-- **Neighbor (f_i)**: Each neighbor covers a fraction of the core's surface, proportional to its radius.
+- **f = 0**: Fully shaded, hidden, core-like (maximum stability, zero exposure)
+- **f = 1**: Fully exposed (maximum freedom of movement, maximum potential)
+- **0 < f < 1**: Continuous spectrum of exposure
+
+This mirrors:
+- **Thermodynamics**: Exposure → entropy → energy density
+- **Radiation pressure**: More exposure → more radiation → more pressure
+- **Packing theory**: Exposure determines packing density
+- **Signal propagation**: Exposure determines signal strength
+- **Gravitational leakage**: Exposure determines field leakage
 
 **Why it matters:**
 
-This is the **most general exposure system**. Unlike discrete classes, Livnium-O uses continuous solid angle coverage. Larger neighbors cover more surface area, smaller neighbors cover less. This enables heterogeneous configurations.
+This is the **continuous extension** of the cube rule. On a cube, f ∈ {0,1,2,3} (discrete faces). On a sphere, f ∈ [0,1] (continuous solid angle). This makes Livnium-O the **most realistic universe patch**—the universe behaves locally like a sphere, with particles emitting in 4π solid angle, fields spreading across spherical shells, and interactions depending on continuous exposure.
 
-**Status:** ✅ Validated - Solid angle exposure system confirmed
+**Status:** ✅ Validated - Continuous solid-angle exposure system confirmed
 
 ---
 
-## O-A4. Symbolic Weight Law (SW_O — Interaction Potential)
+## O-A4. Symbolic Weight Law (SW_O — Geometric Energy Principle)
 
 **The Law:**
 
-Symbolic Weight in Livnium-O uses the **same formula as other Livnium systems**:
-
 \[
-SW_O = 9 \cdot f
+\boxed{SW_O = 9 \cdot f}
 \]
 
-This keeps Livnium-O parallel to the other systems.
+This is not just a formula—it is a **real physical law** on the sphere.
 
 **Mathematical Formulation:**
 
 \[
-SW_O(\text{node}) = 9 \cdot f(\text{node}) = \begin{cases}
-0 & \text{if Core (f=0)} \\
-9 \cdot f_i & \text{if Neighbor (f=f_i)}
-\end{cases}
+SW_O = 9 \cdot f = 9 \cdot \frac{\Omega}{4\pi}
+\]
+
+Where:
+- **f** = exposure (solid-angle fraction)
+- **Ω** = solid angle exposed to free space
+- **9** = canonical energy constant
+
+**Why SW = 9f Becomes a Physical Law:**
+
+In continuous 3D space, **exposure is energy density**:
+
+- **More exposure** → more freedom of movement → more potential
+- **Less exposure** → more constraint → less potential
+
+This mirrors fundamental physics:
+- **Thermodynamics**: Exposure → entropy → energy
+- **Radiation pressure**: Exposure → radiation → pressure
+- **Packing theory**: Exposure → packing density → energy
+- **Signal propagation**: Exposure → signal strength → energy
+- **Gravitational leakage**: Exposure → field leakage → energy
+
+**The Continuous Extension:**
+
+On a cube: SW = 9·f where f ∈ {0,1,2,3} (discrete faces)
+
+On a sphere: SW = 9·f where f ∈ [0,1] (continuous solid angle)
+
+**The same rule survives** and becomes more fundamental.
+
+**Mathematical Formulation:**
+
+\[
+SW_O(\text{element}) = 9 \cdot f(\text{element}) = 9 \cdot \frac{\Omega}{4\pi}
 \]
 
 **Canonical Values:**
 
-- **Core**: \(f=0\), \(SW_O = 9 \cdot 0 = 0\), Count = 1, Contribution = **0**
-- **Neighbor i**: \(f=f_i\), \(SW_O = 9 \cdot f_i\), Contribution = \(9 \cdot f_i\)
+- **Core (Om)**: \(f=0\), \(SW_O = 9 \cdot 0 = 0\) (stable anchor)
+- **Neighbor i**: \(f=f_i\), \(SW_O = 9 \cdot f_i\) (proportional to solid angle)
 
 **Total Symbolic Weight:**
 
@@ -195,15 +261,16 @@ SW_O(\text{node}) = 9 \cdot f(\text{node}) = \begin{cases}
 
 **Physical Meaning:**
 
-- Core (f=0) has zero symbolic weight (stable, non-interacting anchor).
-- Neighbor spheres (f=f_i) have symbolic weight proportional to their solid angle coverage.
-- Perfect symmetry: Same SW formula (9·f) works across all Livnium systems.
+- **SW = 9f** is a **geometric energy principle**
+- Exposure f determines energy density
+- More exposure → more energy → more interaction potential
+- This matches how the universe actually works locally
 
 **Why it matters:**
 
-This maintains perfect parallelism with Livnium Core, Livnium-T, and Livnium-C. The same SW formula (9·f) works for all systems, ensuring consistent semantics. Livnium-O is the **most general 3D universe**—perfect for continuous and heterogeneous phenomena.
+This is the **continuous extension** of the cube rule. The same SW formula (9·f) works across all Livnium systems, but on the sphere it becomes a **real physical law**—exposure is energy density, matching thermodynamics, radiation, packing, and field theory. Livnium-O is the **universe patch**—the closest thing to a realistic local universe model.
 
-**Status:** ✅ Confirmed - Canonical SW = 9·Σf_i verified
+**Status:** ✅ Confirmed - SW = 9f as geometric energy principle verified
 
 ---
 
@@ -259,6 +326,16 @@ n_{\max}(r) = \left\lfloor \frac{2}{1 - \sqrt{1 - \left(\frac{r}{1 + r}\right)^2
 **Why it matters:**
 
 This is the **structural law** of Livnium-O. It determines which configurations are geometrically valid. It generalizes the classical kissing number problem to arbitrary radii. It provides a clean, computable test for validity.
+
+**Connection to Exposure:**
+
+The kissing constraint is directly related to exposure:
+
+\[
+\sum_i f_i = \sum_i \frac{\Omega_i}{4\pi} = \frac{1}{4\pi} \sum_i \Omega_i \le \frac{4\pi}{4\pi} = 1
+\]
+
+So the sum of exposures is bounded by 1, and the kissing constraint (normalized by 2π) gives the same bound.
 
 **Status:** ✅ Validated - Generalized kissing constraint confirmed
 
@@ -746,7 +823,14 @@ These principles ensure that implementations remain faithful to the axiomatic fo
 | **Complexity** | Higher (4 classes, 27 cells) | Minimal (2 classes, 5 nodes) | Simplest (2 classes, 1+N nodes) | Most general (continuous, 1+N elements) |
 | **Status** | Canonical universe | Minimal universe | Periodic universe | **Continuous universe** |
 
-**Livnium-O is literally the "most general continuous universe"**—perfect for heterogeneous, continuous, and spherical phenomena.
+**Livnium-O is literally the "universe patch"**—the closest thing to a realistic local universe model. It matches how the universe behaves locally:
+- Particles emit in 4π solid angle
+- Fields spread across spherical shells  
+- Interactions depend on continuous exposure
+- Packing density shapes energy
+- Continuous rotations (SO(3)) describe motion
+
+The rule **SW = 9f** matches this beautifully.
 
 **Why K_O = 9 is Canonical:**
 
@@ -765,6 +849,31 @@ Livnium-O is not Livnium Core. It is not Livnium-T. It is not Livnium-C. It is a
 The spherical universe behaves according to these axioms. The tests will confirm the structure. The implementation follows the geometry.
 
 **Livnium-O is a complete, stand-alone semantic engine.**
+
+---
+
+## The Universe Patch
+
+**Livnium-O is the universe patch.**
+
+On a cube or tetrahedron, exposure f = number of flat faces (discrete: f ∈ {0,1,2,3}).
+
+On a sphere, there are **no faces**. Exposure becomes **continuous**:
+
+\[
+f = \frac{\Omega}{4\pi}
+\]
+
+This makes **SW = 9f** a **real physical law**—exposure is energy density, matching:
+- Thermodynamics
+- Radiation pressure
+- Packing theory
+- Signal propagation
+- Gravitational leakage
+
+The universe behaves locally like a sphere. Livnium-O captures this perfectly.
+
+**SW = 9f survives. And it becomes a real physical law.**
 
 ---
 

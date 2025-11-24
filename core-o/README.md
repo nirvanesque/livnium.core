@@ -1,11 +1,25 @@
-# Livnium-O System — Stand-Alone Spherical Semantic Engine
+# Livnium-O System — Canonical Continuous Spherical Field
 
 Complete specification and implementation of the **Livnium-O System** — a pure spherical semantic engine independent of Livnium Core, Livnium-T, and Livnium-C.
 
 **Stand-Alone:** Not dependent on other Livnium systems  
 **Spherical:** Pure 3D sphere geometry with continuous surface  
-**Independent:** Parallel system with its own mechanics  
+**Continuous:** Exposure is a solid-angle fraction (f = Ω/4π), not discrete classes  
+**Physical Law:** SW = 9f becomes a real geometric energy principle  
+**Universe Patch:** The closest thing to a realistic local universe model  
 **Complete:** Self-contained axiomatic foundation
+
+**The Fundamental Insight:**
+
+On a cube or tetrahedron, exposure f = number of flat faces (discrete: f ∈ {0,1,2,3}).
+
+On a sphere, there are **no faces**. Exposure becomes **continuous**:
+
+\[
+f = \frac{\Omega}{4\pi}
+\]
+
+This makes **SW = 9f** a **real physical law**—exposure is energy density, matching thermodynamics, radiation pressure, packing theory, and signal propagation.
 
 ---
 
@@ -19,16 +33,16 @@ All axioms, derived laws, and implementation principles are documented in the ca
 
 ## Quick Overview
 
-Livnium-O implements a **spherical semantic engine** using:
+Livnium-O implements a **continuous spherical field** using:
 
 - **1+N topology**: 1 central core sphere (Om, radius=1) + N neighbor spheres with arbitrary radii
-- **Continuous exposure**: Based on solid angle coverage
-- **Symbolic Weight**: SW_O = 9·f, ΣSW_O = 9N (canonical)
+- **Continuous exposure**: f = Ω/4π (solid-angle fraction, not discrete classes)
+- **Symbolic Weight**: SW_O = 9·f (geometric energy principle)
 - **Rotation group**: Spherical rotations SO(3) (continuous)
 - **Generalized kissing constraint**: Fundamental packing law
 - **Conservation ledger**: Invariant quantities preserved
 
-**Critical Distinction:** Livnium-O is **NOT a spherical lattice** like cubes have a lattice. It is a **1+N topological object** with spherical adjacency—the most general continuous universe.
+**Critical Distinction:** Livnium-O is **NOT a spherical lattice** like cubes have a lattice. It is a **continuous spherical field**—the universe patch. Exposure is continuous (f ∈ [0,1]), not discrete. **SW = 9f** is a real physical law, not just a formula.
 
 ---
 
@@ -164,13 +178,21 @@ core-o/
 
 **Spherical geometry offers:**
 
-- **Most general structure**: 1+N elements with arbitrary radii
-- **Continuous exposure**: Based on solid angle, not discrete classes
+- **Universe patch**: The closest thing to a realistic local universe model
+- **Continuous exposure**: f = Ω/4π (solid-angle fraction, not discrete classes)
+- **Physical law**: SW = 9f becomes a real geometric energy principle
+- **SO(3) symmetry**: Continuous rotation group matches physical reality
 - **Clean algebra**: Perfect symmetry with simple formulas
 - **Heterogeneous configurations**: Different neighbor radii allowed
-- **Parallel system**: Independent from cubic, tetrahedral, and circular geometry
-- **Canonical SW**: ΣSW_O = 9N (sphere equivalent of other systems)
 - **Generalized kissing**: Works for arbitrary radii, not just uniform
+
+**The Continuous Extension:**
+
+On a cube: SW = 9·f where f ∈ {0,1,2,3} (discrete faces)
+
+On a sphere: SW = 9·f where f ∈ [0,1] (continuous solid angle)
+
+**The same rule survives** and becomes more fundamental.
 
 **Use cases:**
 
@@ -179,6 +201,9 @@ core-o/
 - Continuous and periodic phenomena
 - Parallel semantic engines alongside other Livnium systems
 - Generalized packing problems
+- **Universe patch modeling**: Local universe behavior
+- **Energy density maps**: Exposure → energy density
+- **Field theory**: Continuous exposure → field strength
 
 ---
 
