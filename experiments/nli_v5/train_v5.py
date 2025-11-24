@@ -266,8 +266,9 @@ def main():
                 'neutral': 'neutral'  # Keep neutral, or invert to E/C? Experiment!
             }
             inverted_label = label_inverter.get(gold_label, gold_label)
-            # Use inverted label in debug mode (forces will be wrong, but geometry is real)
-            classifier = LivniumV5Classifier(pair, debug_mode=True, golden_label_hint=inverted_label)
+            # REVERSE PHYSICS MODE: Use inverted label but DO NOT set forces
+            # Forces compute naturally from geometry - this reveals true invariants
+            classifier = LivniumV5Classifier(pair, debug_mode=False, golden_label_hint=inverted_label, reverse_physics_mode=True)
         # DEBUG MODE: Pass golden label to decision layer
         elif args.debug_golden:
             classifier = LivniumV5Classifier(pair, debug_mode=True, golden_label_hint=gold_label)
@@ -354,7 +355,8 @@ def main():
                 'neutral': 'neutral'
             }
             inverted_label = label_inverter.get(gold_label, gold_label)
-            classifier = LivniumV5Classifier(pair, debug_mode=True, golden_label_hint=inverted_label)
+            # REVERSE PHYSICS MODE: Use inverted label but DO NOT set forces
+            classifier = LivniumV5Classifier(pair, debug_mode=False, golden_label_hint=inverted_label, reverse_physics_mode=True)
         # Use debug mode if flag is set (for verification)
         elif args.debug_golden:
             classifier = LivniumV5Classifier(pair, debug_mode=True, golden_label_hint=gold_label)
@@ -400,7 +402,8 @@ def main():
                 'neutral': 'neutral'
             }
             inverted_label = label_inverter.get(gold_label, gold_label)
-            classifier = LivniumV5Classifier(pair, debug_mode=True, golden_label_hint=inverted_label)
+            # REVERSE PHYSICS MODE: Use inverted label but DO NOT set forces
+            classifier = LivniumV5Classifier(pair, debug_mode=False, golden_label_hint=inverted_label, reverse_physics_mode=True)
         # Use debug mode if flag is set (for verification)
         elif args.debug_golden:
             classifier = LivniumV5Classifier(pair, debug_mode=True, golden_label_hint=gold_label)

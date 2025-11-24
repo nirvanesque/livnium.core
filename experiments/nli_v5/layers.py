@@ -41,7 +41,60 @@ class Layer0Resonance:
     - Convergence (E): Word vectors point toward each other → negative divergence → attraction
     - Divergence (C): Word vectors point away from each other → positive divergence → repulsion
     - Neutral (N): Mixed or balanced → near-zero divergence → flat field
+    
+    Divergence equilibrium threshold K is data-driven:
+    - Default: neutral-anchored (K = mean alignment of neutral examples)
+    - Can be calibrated from patterns or set explicitly
     """
+    
+    # Class-level equilibrium threshold (calibrated from data)
+    # Default: 0.1408 (E/C midpoint, calibrated from actual patterns - fixes divergence sign)
+    # This ensures: E divergence < 0 (inward), C divergence > 0 (outward), N divergence ≈ 0
+    # Can be recalibrated using calibrate_divergence.py or Layer0Resonance.calibrate_threshold()
+    equilibrium_threshold = 0.1408  # Data-driven: E/C midpoint (calibrated from patterns_normal.json)
+    
+    @classmethod
+    def calibrate_threshold(cls, patterns_data: dict = None, method: str = 'neutral'):
+        """
+        Calibrate equilibrium threshold K from pattern data.
+        
+        Args:
+            patterns_data: Dict with 'stats' key containing label statistics
+            method: 'neutral' (use neutral mean alignment) or 'midpoint' (use E/C midpoint)
+        
+        Returns:
+            Calibrated threshold K
+        """
+        if patterns_data is None:
+            return cls.equilibrium_threshold
+        
+        stats = patterns_data.get('stats', {})
+        
+        if method == 'neutral':
+            # Option A: Neutral-anchored (makes neutral the rest surface)
+            if 'neutral' in stats and 'signals' in stats['neutral']:
+                # Estimate alignment from divergence: alignment = K - divergence
+                # For neutral, we want divergence ≈ 0, so K ≈ alignment_neutral
+                neutral_div = stats['neutral']['signals'].get('divergence', {}).get('mean', 0.0)
+                # If we have current K, estimate alignment: alignment = K - divergence
+                estimated_alignment = cls.equilibrium_threshold - neutral_div
+                # New K should make neutral divergence ≈ 0, so K = alignment_neutral
+                cls.equilibrium_threshold = estimated_alignment
+                return cls.equilibrium_threshold
+        
+        elif method == 'midpoint':
+            # Option B: Midpoint between E and C
+            if 'entailment' in stats and 'contradiction' in stats:
+                e_div = stats['entailment']['signals'].get('divergence', {}).get('mean', 0.0)
+                c_div = stats['contradiction']['signals'].get('divergence', {}).get('mean', 0.0)
+                # Estimate alignments: alignment = K - divergence
+                e_align = cls.equilibrium_threshold - e_div
+                c_align = cls.equilibrium_threshold - c_div
+                # New K is midpoint
+                cls.equilibrium_threshold = 0.5 * (e_align + c_align)
+                return cls.equilibrium_threshold
+        
+        return cls.equilibrium_threshold
     
     def compute(self, encoded_pair) -> Dict[str, float]:
         """
@@ -55,16 +108,9 @@ class Layer0Resonance:
         tokens = encoded_pair.tokens
         
         # ========================================================================
-        # DIVERGENCE-BASED CONTRADICTION FIELD
+        # NOTE: Divergence is now computed by LayerOpposition (Layer 1.5)
+        # Layer 0 only provides similarity signals (resonance, alignment components)
         # ========================================================================
-        # Compute field divergence: measures how word vectors converge/diverge
-        # This creates a REAL geometric repulsive force, not just boosted distance
-        
-        divergence = self._compute_field_divergence(premise_vecs, hypothesis_vecs)
-        
-        # Convergence (negative divergence) → Entailment
-        # Divergence (positive divergence) → Contradiction
-        # Near-zero divergence → Neutral
         
         # ========================================================================
         # Legacy signals (kept for backward compatibility and reinforcement)
@@ -97,23 +143,99 @@ class Layer0Resonance:
         
         return {
             'resonance': float(resonance),
-            'divergence': float(divergence),  # NEW: Real geometric divergence field
-            'word_opposition': float(max_opposition),
+            # NOTE: Divergence is now computed by LayerOpposition (Layer 1.5)
+            # Layer 0 only provides similarity signals (resonance, alignment components)
+            'word_opposition': float(max_opposition),  # Legacy: kept for backward compatibility
             'learned_contradiction': float(learned_contradiction_strength)
         }
     
-    def _compute_field_divergence(self, premise_vecs: List[np.ndarray], 
+    def _compute_opposition_field(self, premise_vecs: List[np.ndarray], 
                                    hypothesis_vecs: List[np.ndarray]) -> float:
         """
-        Compute REAL repulsion field divergence.
+        Compute OPPOSITION FIELD - measures semantic opposition (opposite direction).
         
-        REPULSION FIELD THEORY:
-        - Entailment (E): Vectors align → convergence (negative divergence)
-        - Contradiction (C): Vectors oppose → divergence (positive divergence)  
-        - Neutral (N): Mixed/balanced → near-zero divergence
+        OPPOSITION FIELD THEORY:
+        - Entailment (E): Vectors same direction → negative opposition (convergence)
+        - Contradiction (C): Vectors opposite direction → positive opposition (divergence)
+        - Neutral (N): Vectors orthogonal → near-zero opposition
         
-        Method: Measure orthogonal component (what lies outside shared direction)
-        This creates a TRUE repulsive force, symmetric with convergence.
+        This is the missing axis: alignment measures similarity, opposition measures semantic conflict.
+        
+        Returns:
+            Opposition: negative = same direction (E), positive = opposite direction (C), zero = orthogonal (N)
+        """
+        if not premise_vecs or not hypothesis_vecs:
+            return 0.0
+        
+        # Normalize vectors
+        p_vecs_norm = []
+        h_vecs_norm = []
+        
+        for p_vec in premise_vecs:
+            norm = np.linalg.norm(p_vec)
+            if norm > 1e-6:
+                p_vecs_norm.append(p_vec / norm)
+            else:
+                p_vecs_norm.append(p_vec)
+        
+        for h_vec in hypothesis_vecs:
+            norm = np.linalg.norm(h_vec)
+            if norm > 1e-6:
+                h_vecs_norm.append(h_vec / norm)
+            else:
+                h_vecs_norm.append(h_vec)
+        
+        opposition_signals = []
+        
+        # Sequential opposition (position matters)
+        min_len = min(len(p_vecs_norm), len(h_vecs_norm))
+        for i in range(min_len):
+            p_vec = p_vecs_norm[i]
+            h_vec = h_vecs_norm[i]
+            
+            # Opposition = -alignment (opposite direction = positive opposition)
+            # alignment ranges from -1 (opposite) to +1 (same)
+            # opposition = -alignment ranges from +1 (opposite) to -1 (same)
+            alignment = np.dot(p_vec, h_vec)
+            opposition = -alignment  # Direct opposition measure
+            
+            opposition_signals.append(opposition)
+        
+        # Cross-word opposition (semantic conflict beyond position)
+        cross_oppositions = []
+        for p_vec in p_vecs_norm:
+            for h_vec in h_vecs_norm:
+                alignment = np.dot(p_vec, h_vec)
+                opposition = -alignment
+                cross_oppositions.append(opposition)
+        
+        # Combine: 85% sequential + 15% cross-word
+        if opposition_signals:
+            seq_opp = np.mean(opposition_signals)
+        else:
+            seq_opp = 0.0
+        
+        if cross_oppositions:
+            cross_opp = np.mean(cross_oppositions) * 0.7  # Reduced weight
+        else:
+            cross_opp = 0.0
+        
+        total_opposition = 0.85 * seq_opp + 0.15 * cross_opp
+        
+        return float(np.clip(total_opposition, -1.0, 1.0))
+    
+    def _compute_field_divergence(self, premise_vecs: List[np.ndarray], 
+                                   hypothesis_vecs: List[np.ndarray], 
+                                   opposition: float = 0.0) -> float:
+        """
+        Compute REAL repulsion field divergence with OPPOSITION FIELD.
+        
+        ENHANCED DIVERGENCE FIELD THEORY:
+        - Entailment (E): High alignment + negative opposition → convergence (negative divergence)
+        - Contradiction (C): Medium alignment + positive opposition → divergence (positive divergence)  
+        - Neutral (N): Medium alignment + near-zero opposition → near-zero divergence
+        
+        Now uses BOTH alignment and opposition to properly separate C from N.
         
         Returns:
             Divergence: negative = convergence (E), positive = divergence (C)
@@ -175,15 +297,13 @@ class Layer0Resonance:
                 ortho_h = h_vec - proj_h
                 ortho_magnitude = (np.linalg.norm(ortho_p) + np.linalg.norm(ortho_h)) / 2.0
                 
-                # CALIBRATED: Proper divergence formula with threshold matching actual distribution
-                # Actual mean alignment: ~0.38 (not 0.5)
-                # When alignment > 0.38: negative divergence (convergence/E)
-                # When alignment < 0.38: positive divergence (divergence/C)
-                # Use: divergence = 0.38 - alignment (calibrated to actual data)
-                # This gives: alignment=0.40 (E) → divergence=-0.02 (negative) ✓
-                #            alignment=0.37 (C) → divergence=+0.01 (positive) ✓
-                #            alignment=0.50 (high E) → divergence=-0.12 (negative) ✓
-                equilibrium_threshold = 0.38  # Calibrated to actual alignment distribution
+                # DATA-DRIVEN CALIBRATION: Divergence formula with data-calibrated threshold K
+                # K is calibrated from actual data (neutral-anchored or E/C midpoint)
+                # When alignment > K: negative divergence (convergence/E, inward)
+                # When alignment < K: positive divergence (divergence/C, outward)
+                # Formula: divergence = K - alignment
+                # This makes neutral the "rest surface" (divergence ≈ 0) by construction
+                equilibrium_threshold = Layer0Resonance.equilibrium_threshold  # Use class-level calibrated threshold
                 base_divergence = equilibrium_threshold - alignment
                 
                 # Add orthogonal component as repulsion boost (only when alignment is low)
@@ -207,9 +327,9 @@ class Layer0Resonance:
             for h_vec in h_vecs_norm:
                 alignment = np.dot(p_vec, h_vec)
                 
-                # Use same formula as sequential: 0.38 - alignment (calibrated threshold)
+                # Use same formula as sequential: K - alignment (data-driven threshold)
                 # This ensures low alignment → positive divergence (contradiction)
-                equilibrium_threshold = 0.38  # Match sequential computation
+                equilibrium_threshold = Layer0Resonance.equilibrium_threshold  # Match sequential computation
                 divergence_signal = (equilibrium_threshold - alignment) * 0.7  # Slightly reduced for cross-word
                 
                 cross_signals.append(divergence_signal)
@@ -225,10 +345,136 @@ class Layer0Resonance:
         else:
             cross_div = 0.0
         
-        total_divergence = 0.85 * seq_div + 0.15 * cross_div
+        alignment_based_divergence = 0.85 * seq_div + 0.15 * cross_div
+        
+        # ========================================================================
+        # ENHANCE WITH OPPOSITION FIELD
+        # ========================================================================
+        # Opposition field provides the missing axis:
+        # - Contradiction: positive opposition (opposite direction) → boosts divergence
+        # - Neutral: near-zero opposition (orthogonal) → doesn't boost divergence
+        # - Entailment: negative opposition (same direction) → reduces divergence
+        
+        # Combine alignment-based divergence with opposition field
+        # Weight: 70% alignment-based, 30% opposition (opposition is the separator)
+        opposition_boost = opposition * 0.3  # Positive opposition → positive divergence boost
+        
+        total_divergence = alignment_based_divergence + opposition_boost
         
         # Return signed divergence: negative = convergence (E), positive = divergence (C)
         return float(np.clip(total_divergence, -1.0, 1.0))
+
+
+class LayerOpposition:
+    """
+    Layer 1.5: Opposition Field
+    
+    This layer introduces the missing semantic direction signal.
+    Up to now resonance measured similarity, curvature measured
+    energy density, but nothing detected *opposite direction*.
+    
+    This layer fixes the Inward–Outward separation axis:
+      • entailment     → strong inward  (negative)
+      • neutral        → near zero      (flat)
+      • contradiction  → strong outward (positive)
+    """
+    
+    def __init__(self, opposition_strength: float = 1.0):
+        """
+        Args:
+            opposition_strength: scalar weight to tune intensity
+                                 of the outward force.
+        """
+        self.k = opposition_strength
+    
+    def compute_opposite_cosine(self, v1: np.ndarray, v2: np.ndarray) -> float:
+        """
+        True geometric opposition: cos(theta) between v1 and -v2.
+        
+        If v1 is aligned with v2 → cos positive
+        If v1 is unrelated → cos ~ 0
+        If v1 is opposite of v2 → cos negative
+        """
+        dot = np.dot(v1, -v2)
+        n1 = np.linalg.norm(v1) + 1e-9
+        n2 = np.linalg.norm(v2) + 1e-9
+        return dot / (n1 * n2)
+    
+    def compute(self, premise_vecs: List[np.ndarray], hypothesis_vecs: List[np.ndarray], 
+                resonance: float, curvature: float) -> Dict[str, float]:
+        """
+        Compute opposition field and corrected divergence.
+        
+        Args:
+            premise_vecs: word vectors from premise
+            hypothesis_vecs: word vectors from hypothesis
+            resonance: Layer 0 signal (similarity)
+            curvature: Layer 1 signal (density stability)
+        
+        Returns:
+            {
+              "opposition_raw": raw negative cosine value,
+              "opposition_norm": 0..1 outward field,
+              "divergence_final": new inward/outward axis
+            }
+        """
+        if not premise_vecs or not hypothesis_vecs:
+            return {
+                "opposition_raw": 0.0,
+                "opposition_norm": 0.5,
+                "divergence_final": 0.0
+            }
+        
+        # Compute mean vectors for premise and hypothesis
+        premise_mean = np.mean([v for v in premise_vecs if np.linalg.norm(v) > 0], axis=0) if premise_vecs else np.zeros(27)
+        hypothesis_mean = np.mean([v for v in hypothesis_vecs if np.linalg.norm(v) > 0], axis=0) if hypothesis_vecs else np.zeros(27)
+        
+        # Normalize
+        p_norm = np.linalg.norm(premise_mean)
+        h_norm = np.linalg.norm(hypothesis_mean)
+        
+        if p_norm > 1e-9 and h_norm > 1e-9:
+            premise_unit = premise_mean / p_norm
+            hypothesis_unit = hypothesis_mean / h_norm
+        else:
+            premise_unit = premise_mean
+            hypothesis_unit = hypothesis_mean
+        
+        # 1. Raw opposition measure (negative for contradiction)
+        opp_raw = self.compute_opposite_cosine(premise_unit, hypothesis_unit)
+        
+        # Role:
+        #   entailment       → opp_raw ≈ +0.4
+        #   neutral          → opp_raw ≈ 0.0
+        #   contradiction    → opp_raw ≈ -0.4 to -0.8
+        
+        # 2. Convert to outward force (positive means contradiction)
+        #    opposition_norm ∈ [0, 1]
+        #    (1 - opp_raw) maps:
+        #       contradiction → ~1
+        #       neutral       → ~0.5
+        #       entailment    → ~0
+        opposition_norm = (1.0 - opp_raw) / 2.0
+        
+        # 3. Compute alignment-based divergence using the correct formula
+        #    Use the alignment-based divergence from Layer0Resonance._compute_field_divergence
+        #    This ensures: E has negative divergence, C has positive divergence, N has near-zero
+        #    Note: opp_raw is inverted (entailment gives negative, contradiction gives positive)
+        #    So we use -opp_raw to match the expected sign convention
+        layer0_resonance = Layer0Resonance()
+        alignment_based_divergence = layer0_resonance._compute_field_divergence(
+            premise_vecs, hypothesis_vecs, opposition=-opp_raw  # Invert sign to match expected convention
+        )
+        
+        # 4. The alignment-based divergence already includes opposition boost from _compute_field_divergence
+        #    So we use it directly (it's already correctly computed)
+        divergence_final = alignment_based_divergence
+        
+        return {
+            "opposition_raw": float(opp_raw),
+            "opposition_norm": float(opposition_norm),
+            "divergence_final": float(np.clip(divergence_final, -1.0, 1.0)),
+        }
 
 
 class Layer1Curvature:
@@ -252,7 +498,10 @@ class Layer1Curvature:
         This creates a true three-force physics: convergence (E), divergence (C), neutral (N).
         """
         resonance = layer0_output['resonance']
-        divergence = layer0_output.get('divergence', 0.0)  # NEW: Real divergence field
+        # NOTE: Divergence is now computed by LayerOpposition (Layer 1.5)
+        # It will be injected into layer1_output AFTER this compute() call
+        # For now, compute curvature and other signals without divergence
+        # Divergence will be set by the classifier after opposition layer runs
         word_opposition = layer0_output.get('word_opposition', 0.0)
         learned_contradiction = layer0_output.get('learned_contradiction', 0.0)
         
@@ -263,7 +512,10 @@ class Layer1Curvature:
         # ========================================================================
         # Convergence = negative divergence (vectors point toward each other)
         # Cold density measures how much the field converges (attraction)
-        convergence = -divergence  # Negative divergence = convergence
+        # NOTE: Divergence will be set by opposition layer after this compute()
+        # For now, use placeholder - will be updated by classifier
+        divergence = 0.0  # Placeholder - will be overwritten by opposition layer
+        convergence = 0.0  # Placeholder - will be computed from final divergence
         
         # Cold density: positive convergence + positive resonance = dense, stable (E)
         # Combine convergence signal with resonance for robustness
@@ -321,8 +573,10 @@ class Layer1Curvature:
         
         return {
             'resonance': resonance,
-            'divergence': float(divergence),  # NEW: Raw divergence field value
-            'convergence': float(convergence),  # NEW: Convergence (negative divergence)
+            # NOTE: divergence and convergence will be set by opposition layer
+            # These are placeholders - classifier will overwrite them
+            'divergence': 0.0,  # Placeholder - will be overwritten by opposition layer
+            'convergence': 0.0,  # Placeholder - will be computed from final divergence
             'cold_density': cold_density,
             'distance': distance,  # Now represents divergence force (for backward compat)
             'divergence_force': float(total_divergence),  # NEW: Total divergence force
@@ -483,19 +737,21 @@ class Layer3Valley:
 class Layer4Decision:
     """Layer 4: Final decision - properly handles all 3 classes."""
     
-    def __init__(self, debug_mode: bool = False, golden_label_hint: str = None):
+    def __init__(self, debug_mode: bool = False, golden_label_hint: str = None, reverse_physics_mode: bool = False):
         """
         Initialize decision layer.
         
         Args:
             debug_mode: If True, use golden label hint to verify decision logic
             golden_label_hint: Optional golden label ('entailment', 'contradiction', 'neutral')
+            reverse_physics_mode: If True, disable force setting (for reverse physics experiments)
         """
         self.weak_force_threshold = 0.05
         self.balance_threshold = 0.15
         self.force_dominance_threshold = 0.1  # Minimum difference to pick E or C
         self.debug_mode = debug_mode
         self.golden_label_hint = golden_label_hint
+        self.reverse_physics_mode = reverse_physics_mode
         
         # Physics-based thresholds from canonical fingerprints
         # Based on golden label analysis: E needs divergence + resonance
@@ -518,11 +774,12 @@ class Layer4Decision:
         resonance = layer3_output.get('resonance', 0.0)  # Get resonance from earlier layers
         
         # DEBUG MODE: If golden label hint is provided, use it to verify decision logic
-        if self.debug_mode and self.golden_label_hint:
+        # REVERSE PHYSICS MODE: Do NOT set forces - let geometry compute naturally
+        if self.debug_mode and self.golden_label_hint and not self.reverse_physics_mode:
             label_map = {'entailment': 0, 'contradiction': 1, 'neutral': 2}
             basin_idx = label_map.get(self.golden_label_hint, 2)
             
-            # Set forces to match the golden label
+            # Set forces to match the golden label (only in normal debug mode)
             if basin_idx == 0:  # Entailment
                 cold_force = 0.7
                 far_force = 0.2
@@ -557,6 +814,35 @@ class Layer4Decision:
                 'cold_force': cold_force,  # Overwrite with debug forces
                 'far_force': far_force,    # Overwrite with debug forces
                 'city_force': city_force,   # Overwrite with debug forces
+                'e_score': e_score,
+                'c_score': c_score,
+                'n_score': n_score
+            }
+        
+        # REVERSE PHYSICS MODE: Use inverted label but let forces compute naturally from geometry
+        # This allows us to see what geometry produces when labels are wrong
+        if self.reverse_physics_mode and self.golden_label_hint:
+            label = self.golden_label_hint  # Use inverted label for recording
+            label_map = {'entailment': 0, 'contradiction': 1, 'neutral': 2}
+            basin_index = label_map.get(label, 2)
+            # Forces remain as computed from geometry (not overwritten)
+            confidence = max(cold_force, far_force, city_force)
+            
+            # Compute scores from natural forces
+            total_score = cold_force + far_force + city_force
+            if total_score > 0:
+                e_score = cold_force / total_score
+                c_score = far_force / total_score
+                n_score = city_force / total_score
+            else:
+                e_score = c_score = n_score = 0.33
+            
+            return {
+                **layer3_output,
+                'label': label,  # Inverted label for recording
+                'basin_index': basin_index,
+                'confidence': float(np.clip(confidence, 0.0, 1.0)),
+                # Forces remain as computed from geometry (pure geometry, no artificial forces)
                 'e_score': e_score,
                 'c_score': c_score,
                 'n_score': n_score

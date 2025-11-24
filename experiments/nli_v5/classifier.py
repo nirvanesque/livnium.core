@@ -11,7 +11,7 @@ import numpy as np
 
 from .encoder import ChainEncodedPair
 from .layers import (
-    Layer0Resonance, Layer1Curvature, Layer2Basin,
+    Layer0Resonance, LayerOpposition, Layer1Curvature, Layer2Basin,
     Layer3Valley, Layer4Decision
 )
 from experiments.nli_simple.native_chain import SimpleLexicon
@@ -39,7 +39,7 @@ class LivniumV5Classifier:
     - Layer 4: Decision (final classification)
     """
     
-    def __init__(self, encoded_pair: ChainEncodedPair, debug_mode: bool = False, golden_label_hint: str = None):
+    def __init__(self, encoded_pair: ChainEncodedPair, debug_mode: bool = False, golden_label_hint: str = None, reverse_physics_mode: bool = False):
         """
         Initialize classifier.
         
@@ -47,17 +47,20 @@ class LivniumV5Classifier:
             encoded_pair: Chain-encoded premise-hypothesis pair
             debug_mode: If True, use golden label hint to verify decision logic
             golden_label_hint: Optional golden label for debugging ('entailment', 'contradiction', 'neutral')
+            reverse_physics_mode: If True, disable force setting (for reverse physics experiments)
         """
         self.encoded_pair = encoded_pair
         self.debug_mode = debug_mode
         self.golden_label_hint = golden_label_hint
+        self.reverse_physics_mode = reverse_physics_mode
         
         # Initialize layers
         self.layer0 = Layer0Resonance()
+        self.layer_opposition = LayerOpposition(opposition_strength=1.0)  # NEW: Opposition field (Layer 1.5)
         self.layer1 = Layer1Curvature()
         self.layer2 = Layer2Basin()
         self.layer3 = Layer3Valley()
-        self.layer4 = Layer4Decision(debug_mode=debug_mode, golden_label_hint=golden_label_hint)
+        self.layer4 = Layer4Decision(debug_mode=debug_mode, golden_label_hint=golden_label_hint, reverse_physics_mode=reverse_physics_mode)
     
     def classify(self) -> ClassificationResult:
         """
@@ -66,11 +69,41 @@ class LivniumV5Classifier:
         Returns:
             ClassificationResult with final decision
         """
-        # Layer 0: Pure Resonance
+        # Layer 0: Pure Resonance (ONLY similarity signals, no divergence)
         l0_output = self.layer0.compute(self.encoded_pair)
         
-        # Layer 1: Curvature (pass encoded_pair for semantic gap computation)
+        # Layer 1: Curvature (computes without divergence - will be injected next)
         l1_output = self.layer1.compute(l0_output, encoded_pair=self.encoded_pair)
+        
+        # Layer 1.5: Opposition Field (NEW - fixes Inward-Outward Axis)
+        # Compute opposition field and corrected divergence
+        premise_vecs, hypothesis_vecs = self.encoded_pair.get_word_vectors()
+        opposition_output = self.layer_opposition.compute(
+            premise_vecs, 
+            hypothesis_vecs,
+            resonance=l0_output.get('resonance', 0.0),
+            curvature=l1_output.get('curvature', 0.0)
+        )
+        
+        # CRITICAL: Inject opposition-corrected divergence into layer1_output
+        # This divergence_final flows through all subsequent layers
+        divergence_final = opposition_output['divergence_final']
+        l1_output['divergence'] = divergence_final
+        l1_output['convergence'] = -divergence_final  # Update convergence based on final divergence
+        l1_output['opposition_raw'] = opposition_output['opposition_raw']
+        l1_output['opposition_norm'] = opposition_output['opposition_norm']
+        
+        # Update cold_density and divergence_force based on final divergence
+        # Convergence (E): Cold density from negative divergence
+        convergence = -divergence_final
+        l1_output['cold_density'] = max(0.0, convergence) + max(0.0, l0_output.get('resonance', 0.0) * 0.5)
+        
+        # Divergence (C): Real repulsive force from positive divergence
+        divergence_force = max(0.0, divergence_final)
+        if l0_output.get('resonance', 0.0) < 0:
+            divergence_force += abs(l0_output.get('resonance', 0.0)) * 0.5
+        l1_output['divergence_force'] = divergence_force
+        l1_output['distance'] = divergence_force  # For backward compatibility
         
         # Layer 2: Basins
         l2_output = self.layer2.compute(l1_output)
