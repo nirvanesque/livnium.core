@@ -35,6 +35,15 @@ This module enables:
 
 This is the **"Layer 0"** recursive engine that enables massive scale - the foundation where everything else ultimately lives inside this recursion.
 
+## Default Configuration
+
+- **Default depth**: 5 levels (~19,530 nodes, ~3,906 geometries)
+- **Growth factor**: 5x per level (exponential)
+- **Capacity**: Scales as 5^(depth+1) nodes total
+- **Memory**: ~O(5^depth) geometries stored
+
+The default depth of 5 provides a good balance between capacity and performance for most use cases.
+
 ## Key Differences from Core Recursive
 
 | Feature | Core Recursive | Livnium-T Recursive |

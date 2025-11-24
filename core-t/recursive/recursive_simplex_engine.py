@@ -61,14 +61,14 @@ class RecursiveSimplexEngine:
     
     def __init__(self, 
                  base_geometry: LivniumTSystem,
-                 max_depth: int = 3,
+                 max_depth: int = 5,
                  subdivision_rule: Optional[Callable] = None):
         """
         Initialize recursive simplex engine.
         
         Args:
             base_geometry: Base Livnium-T System (Level 0)
-            max_depth: Maximum recursion depth
+            max_depth: Maximum recursion depth (default: 5, ~19K nodes)
             subdivision_rule: Optional custom subdivision rule
         """
         self.base_geometry = base_geometry
