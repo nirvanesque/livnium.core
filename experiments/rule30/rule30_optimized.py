@@ -16,6 +16,9 @@ def generate_center_column_direct(n_steps: int, show_progress: bool = True) -> L
     This is optimized for large sequences (100k+ steps) where we only
     need the center column, not the entire triangle.
     
+    Matches the original generate_rule30() logic exactly, but only extracts
+    the center column instead of storing all rows.
+    
     Args:
         n_steps: Number of steps to generate
         show_progress: Show progress indicator
@@ -26,14 +29,10 @@ def generate_center_column_direct(n_steps: int, show_progress: bool = True) -> L
     if n_steps <= 0:
         return []
     
-    # We need a window around the center to compute the center cell
-    # Rule 30 needs left, center, right neighbors
-    # For center column, we track a window of cells around center
-    window_size = min(n_steps + 10, 2000)  # Reasonable window size
-    
-    # Initialize: single black cell at center
-    current_row = [0] * window_size
-    center_idx = window_size // 2
+    # Match original initialization exactly
+    # Start with single black cell in center
+    current_row = [0] * (n_steps + 1)
+    center_idx = n_steps // 2
     current_row[center_idx] = 1
     
     center_column = [1]  # First row center is 1
@@ -48,27 +47,35 @@ def generate_center_column_direct(n_steps: int, show_progress: bool = True) -> L
             sys.stdout.write(f"\rGenerating Rule 30: {step:,}/{n_steps:,} ({percent:.1f}%)")
             sys.stdout.flush()
         
-        # Create new row
-        new_row = [0] * window_size
+        # Create new row (one cell wider on each side) - matches original
+        new_row = [0] * (len(current_row) + 2)
         
-        # Apply Rule 30
-        for i in range(1, window_size - 1):
-            left = current_row[i - 1]
+        # Apply Rule 30 to each cell - matches original exactly
+        for i in range(1, len(current_row) - 1):
+            left = current_row[i - 1] if i > 0 else 0
             center = current_row[i]
-            right = current_row[i + 1]
+            right = current_row[i + 1] if i < len(current_row) - 1 else 0
             
-            # Rule 30: new = (left XOR center) OR (center AND NOT right)
+            # Rule 30 formula - matches original
             new_cell = (left ^ center) | (center & (1 - right))
-            new_row[i] = new_cell
+            new_row[i + 1] = new_cell  # Offset by 1 to account for growth
         
-        # Extract center cell
-        center_cell = new_row[center_idx]
+        # Trim row like original FIRST (before extracting center)
+        first_nonzero = next((i for i, x in enumerate(new_row) if x != 0), 0)
+        last_nonzero = next((i for i in range(len(new_row) - 1, -1, -1) if new_row[i] != 0), len(new_row) - 1)
+        
+        # Keep padding for symmetry (matches original exactly)
+        padding = max(1, (n_steps - step) // 2)
+        start_idx = max(0, first_nonzero - padding)
+        end_idx = min(len(new_row), last_nonzero + padding + 1)
+        
+        trimmed_row = new_row[start_idx:end_idx]
+        
+        # Extract center cell from TRIMMED row (matches extract_center_column logic)
+        center_cell = trimmed_row[len(trimmed_row) // 2]
         center_column.append(center_cell)
         
-        # Update current row (shift window if needed)
-        # For efficiency, we keep a fixed-size window
-        # If pattern grows too wide, we'll miss edges, but center stays accurate
-        current_row = new_row
+        current_row = trimmed_row
     
     if show_progress:
         sys.stdout.write(f"\rGenerating Rule 30: {n_steps:,}/{n_steps:,} (100.0%)\n")
