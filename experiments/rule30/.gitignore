@@ -1,0 +1,16 @@
+# Results and outputs
+results/
+stability_results/
+multi_resolution_results/
+*.png
+*.json
+*.jsonl
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Archive (old files)
+archive/
+

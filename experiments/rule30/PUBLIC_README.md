@@ -31,8 +31,7 @@ The invariant measures **semantic divergence** using angle-based geometry:
 ### Quick Test
 
 ```bash
-python3 experiments/rule30/validate_invariant_direct.py \
-    --sequence-lengths 1000 10000 100000
+python3 experiments/rule30/test_invariant.py --all
 ```
 
 ### Expected Output
@@ -74,10 +73,9 @@ This could relate to:
 
 ## Files
 
-- `validate_invariant_direct.py` - Direct validation (no geometric embedding)
-- `multi_resolution_invariant_test.py` - Tests across cube sizes
-- `divergence_stability_test.py` - Tests across sequence lengths
-- `run_rule30_analysis.py` - Full analysis pipeline
+- `test_invariant.py` - Comprehensive invariant test (sequence lengths, cube sizes, recursive)
+- `analyze.py` - Main analysis script (alias for run_rule30_analysis.py)
+- `run_rule30_analysis.py` - Full analysis pipeline with all features
 
 ## Citation
 

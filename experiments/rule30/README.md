@@ -1,6 +1,13 @@
 # Rule 30 Geometric Analysis
 
-Integration of Rule 30 cellular automaton into the Livnium geometric engine.
+Integration of Rule 30 cellular automaton with Livnium geometric engine.
+
+## 🎯 Discovery: Divergence Invariant
+
+**Rule 30 exhibits a stable geometric invariant: `λ = -0.572222233`**
+
+This invariant persists across sequence lengths, cube sizes, and recursive scales.
+See `PUBLIC_README.md` for public-facing documentation.
 
 ## Overview
 
