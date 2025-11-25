@@ -58,8 +58,16 @@ def embed_recursive(
     
     # Embed subsequences at deeper levels
     # Each level analyzes a different scale of the sequence
-    for level_id in range(1, max_depth + 1):
-        if level_id in engine.levels:
+    # Recursive engine stores levels hierarchically, so we need to traverse children
+    def traverse_levels(parent_level, current_depth):
+        """Recursively traverse levels and embed subsequences."""
+        if current_depth > max_depth:
+            return
+        
+        # Process children of this level
+        for coords, child_level in parent_level.children.items():
+            level_id = child_level.level_id
+            
             # Extract subsequence for this scale
             # Scale down: take every 2^level_id-th element
             scale_factor = 2 ** level_id
@@ -67,8 +75,7 @@ def embed_recursive(
             
             if subsequence and len(subsequence) > 0:
                 # Get level geometry
-                level = engine.levels[level_id]
-                child_cube_size = level.geometry.config.lattice_size
+                child_cube_size = child_level.geometry.config.lattice_size
                 
                 # Create path for this scale
                 child_path = Rule30Path(subsequence, child_cube_size)
@@ -80,9 +87,16 @@ def embed_recursive(
                     boundary = (child_cube_size - 1) // 2
                     x, y, z = coord
                     if -boundary <= x <= boundary and -boundary <= y <= boundary and -boundary <= z <= boundary:
-                        cell = level.geometry.get_cell(coord)
+                        cell = child_level.geometry.get_cell(coord)
                         if cell:
                             cell.phi_value = phi
+            
+            # Recursively process grandchildren
+            traverse_levels(child_level, current_depth + 1)
+    
+    # Start traversal from level 0
+    base_level = engine.levels[0]
+    traverse_levels(base_level, current_depth=1)
     
     return engine, paths_by_level
 
