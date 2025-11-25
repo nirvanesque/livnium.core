@@ -257,6 +257,9 @@ def main():
     print(f"Step 1: Building invariance system...")
     print(f"  Sampling {args.num_rows} random rows of length {args.row_length}")
     
+    nullspace_sympy = None
+    use_exact = False
+    
     if args.exact and SYMPY_AVAILABLE:
         print("  Using exact rational arithmetic (sympy)")
         A_rational = build_invariance_system_rational(
@@ -325,6 +328,9 @@ def main():
         print(f"INVARIANT {i+1}/{nullspace.shape[1]}")
         print(f"{'='*70}")
         
+        weights_rational = None
+        weights = None
+        
         if use_exact and SYMPY_AVAILABLE:
             try:
                 weights_rational = extract_weight_vector_rational(nullspace_sympy, i)
@@ -335,7 +341,8 @@ def main():
                 for p, w in sorted(weights_rational.items()):
                     if w != 0:
                         print(f"  {''.join(str(b) for b in p)}: {w}")
-            except:
+            except Exception as e:
+                print(f"  Error extracting exact weights: {e}")
                 weights = extract_weight_vector(nullspace, i)
                 print(f"Approximate formula:")
                 print(f"  D3(s) = {format_weights(weights)}")
@@ -353,26 +360,36 @@ def main():
         print(f"\nTesting invariance over {args.test_steps} steps...")
         test_row = [random.randint(0, 1) for _ in range(args.row_length)]
         
-        if use_exact and SYMPY_AVAILABLE and i in locals() and 'weights_rational' in locals():
+        if use_exact and SYMPY_AVAILABLE and weights_rational is not None:
             # Test with exact arithmetic
             row = test_row.copy()
             d0 = divergence_v3_rational(row, weights_rational, cyclic=True)
             print(f"  Initial: {d0}")
             
-            for t in range(1, min(6, args.test_steps + 1)):
+            max_delta = Fraction(0)
+            for t in range(1, args.test_steps + 1):
                 row = rule30_step(row, cyclic=True)
                 dt = divergence_v3_rational(row, weights_rational, cyclic=True)
                 delta = dt - d0
-                print(f"  t={t}: {dt}, Δ={delta}")
+                abs_delta = abs(delta)
+                if abs_delta > max_delta:
+                    max_delta = abs_delta
+                
+                if t <= 5 or t % 5 == 0:
+                    print(f"  t={t:3d}: {dt}, Δ={delta}")
             
-            if args.test_steps > 5:
-                print(f"  ... (testing up to t={args.test_steps})")
-                for t in range(6, args.test_steps + 1):
-                    row = rule30_step(row, cyclic=True)
-                dt_final = divergence_v3_rational(row, weights_rational, cyclic=True)
-                delta_final = dt_final - d0
-                print(f"  t={args.test_steps}: {dt_final}, Δ={delta_final}")
+            print(f"  Max |Δ|: {max_delta}")
+            
+            # Check if exact (delta should be exactly 0)
+            if max_delta == 0:
+                print(f"  ✓✓✓ EXACT INVARIANT CONFIRMED!")
+            else:
+                print(f"  ⚠ Not exactly invariant (max |Δ| = {max_delta})")
         else:
+            # Use float weights for testing
+            if weights is None:
+                weights = extract_weight_vector(nullspace, i)
+            
             result = run_invariance_test(weights, test_row, steps=args.test_steps, verbose=False)
             print(f"  Initial value:     {result['initial_value']:.9f}")
             print(f"  Max deviation:     {result['max_deviation']:.9e}")
