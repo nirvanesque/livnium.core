@@ -1,200 +1,82 @@
-# Rule 30 Geometric Analysis
+# Rule 30 Invariant Hunting (Clean Version)
 
-Integration of Rule 30 cellular automaton with Livnium geometric engine.
+Systematic, algebra-based approach to finding exact invariants of Rule 30.
 
-## 🎯 Discovery: Divergence Invariant
+## Goal
 
-**Rule 30 exhibits a stable geometric invariant: `λ = -0.572222233`**
+Find exact algebraic invariants of Rule 30's update rule using linear algebra, then verify them exhaustively.
 
-This invariant persists across sequence lengths, cube sizes, and recursive scales.
-See `PUBLIC_README.md` for public-facing documentation.
+## Files
 
-## 🔬 Divergence V3: Algebra-Based Invariant Hunting
+- **`rule30_algebra.py`**  
+  Canonical definition of Rule 30's update rule and one-step evolution.
 
-**New systematic approach**: Use linear algebra to find invariants directly from Rule 30's update rule.
+- **`divergence_v3.py`**  
+  General 3-bit-window divergence: `D3(row) = Σ_p w_p · freq_p(row)`.
 
-- `rule30_algebra.py` - Core Rule 30 update rule
-- `divergence_v3.py` - Parameterized 3-bit pattern divergence
-- `invariant_solver_v3.py` - Linear system solver for invariants
-- `test_divergence_v3_invariant.py` - Test discovered invariants
+- **`invariant_solver_v3.py`**  
+  Builds a linear system encoding `D3(row) = D3(rule30_step(row))` for many random rows, then finds the nullspace (candidate invariants).
 
-**Goal**: Find weights w_p such that D3(s) = Σ_p w_p · freq_p(s) is invariant under Rule 30.
+- **`test_divergence_v3_invariant.py`**  
+  Complete analysis: extracts invariants, identifies trivial ones, tests invariance.
 
-## Overview
-
-This module embeds Rule 30 CA patterns into Livnium omcubes and computes geometric diagnostics to detect hidden structure or periodicity in the center column sequence.
-
-## Components
-
-### Core Modules
-
-- **`rule30_core.py`**: Generates Rule 30 CA patterns
-- **`center_column.py`**: Extracts center column sequence from triangle
-- **`geometry_embed.py`**: Embeds sequence into Livnium cube as geometric path
-- **`diagnostics.py`**: Computes geometric statistics (divergence, tension, basin depth)
-
-### Main Scripts
-
-- **`analyze.py`**: Main entry point (alias for run_rule30_analysis.py)
-- **`run_rule30_analysis.py`**: Full analysis pipeline with CLI
-- **`test_invariant.py`**: Comprehensive invariant test suite
+- **`bruteforce_verify_invariant.py`**  
+  Exhaustive verification: tests invariant for ALL binary rows of length N.
 
 ## Usage
 
-### Quick Start
+### Step 1: Find Invariants
 
 ```bash
-# Test the invariant
-python3 experiments/rule30/test_invariant.py --quick
-
-# Run analysis
-python3 experiments/rule30/analyze.py --steps 1000
+python3 experiments/rule30_new/test_divergence_v3_invariant.py \
+    --num-rows 300 \
+    --row-length 200 \
+    --exact
 ```
 
-See `QUICKSTART.md` for more examples.
+This will:
+- Build linear system from random rows
+- Find nullspace (candidate invariants)
+- Identify trivial vs non-trivial invariants
+- Extract exact rational weights
+- Test invariance
 
-### Advanced Usage
+### Step 2: Verify Exhaustively
 
 ```bash
-# Generate 200k steps with 5x5x5 cube
-python3 experiments/rule30/run_rule30_analysis.py \
-    --steps 200000 \
-    --cube-size 5 \
-    --output-dir results
-
-# Recursive multi-scale analysis (detects fractal patterns)
-python3 experiments/rule30/run_rule30_analysis.py \
-    --steps 10000 \
-    --recursive \
-    --max-depth 3
-
-# Test invariant (comprehensive)
-python3 experiments/rule30/test_invariant.py --all
-
-# Skip plots, only log to journal
-python3 experiments/rule30/run_rule30_analysis.py \
-    --steps 50000 \
-    --no-plots
+python3 experiments/rule30_new/bruteforce_verify_invariant.py \
+    --N 8 10 12 \
+    --max-steps 20 \
+    --weights "0,1,-1,0,0,-1,1,0"
 ```
 
-### Command-Line Options
+This will:
+- Test invariant for ALL 2^N rows
+- Verify exact preservation over evolution steps
+- Report any counterexamples
 
-- `--steps`: Number of Rule 30 steps to generate (default: 1000)
-- `--cube-size`: Size of Livnium cube: 3, 5, or 7 (default: 3)
-- `--output-dir`: Output directory for plots (default: `experiments/rule30/results`)
-- `--journal`: Path to growth journal file (default: `growth_journal.jsonl`)
-- `--recursive`: Enable recursive multi-scale analysis (detects fractal patterns)
-- `--max-depth`: Maximum recursion depth for recursive mode (default: 3)
-- `--no-plots`: Skip generating plots
-- `--no-journal`: Skip logging to journal
+## What We're Looking For
 
-## How It Works
+**Goal**: Find weights `w_p` such that `D3(s) = Σ_p w_p · freq_p(s)` is preserved exactly under Rule 30 evolution.
 
-1. **Generate Rule 30**: Creates CA triangle starting from single black cell
-2. **Extract Center Column**: Takes center cell from each row
-3. **Embed into Cube**: Maps sequence to vertical path in Livnium cube
-   - Each bit → geometric state: Φ = +1 for 1, Φ = -1 for 0
-4. **Compute Diagnostics**: Uses Layer0/Layer1 pipeline to compute:
-   - **Divergence**: Field divergence along path
-   - **Tension**: Internal contradictions (curvature-based)
-   - **Basin Depth**: Attraction well depth
+**Expected Outcomes**:
 
-### Recursive Mode
+1. **Nullspace is trivial** → No invariant of this form exists
+2. **Nullspace non-trivial, but test shows deviations** → Numerical issues or approximate invariant
+3. **Nullspace non-trivial AND exact preservation** → True algebraic invariant discovered
 
-When `--recursive` is enabled:
+## Current Status
 
-1. **Multi-Scale Embedding**: Creates recursive geometry hierarchy
-   - Level 0: Full sequence in base cube
-   - Level 1+: Subsequences at different scales (every 2^n-th element)
-2. **Fractal Analysis**: Computes diagnostics at each scale
-3. **Self-Similarity Detection**: Compares patterns across scales to detect fractal structure
-4. **Moksha Convergence**: Uses recursive geometry's fixed-point detection
+- ✅ V3 system implemented
+- ✅ Exact rational arithmetic (with sympy)
+- ✅ Trivial invariant identification
+- ✅ Bruteforce verification framework
+- 🔄 Testing and verification in progress
 
-This enables detection of Rule 30's fractal/self-similar patterns that repeat at different scales.
+## Next Steps
 
-### Divergence Stability Test
-
-The **divergence stability test** verifies if Rule 30's center column has a fixed geometric invariant.
-
-**Discovery**: Rule 30's center column shows a constant divergence value of approximately **-0.572222** across different sequence lengths. This suggests a deep geometric law behind Rule 30's apparent randomness.
-
-**Usage**:
-```bash
-# Quick test (sequence lengths only)
-python3 experiments/rule30/test_invariant.py --quick
-
-# Full test (sequence lengths, cube sizes, recursive scales)
-python3 experiments/rule30/test_invariant.py --all
-```
-
-**What it tests**:
-- Sequence length independence (1k, 10k, 100k steps)
-- Cube size independence (3×3×3, 5×5×5, 7×7×7)
-- Recursive scale independence (levels 0, 1, 2, 3)
-
-**Significance**: 
-- ✅ **CONFIRMED**: Invariant persists across all tested conditions
-- First conserved quantity ever discovered for Rule 30
-- The randomness sits inside a fixed geometric orbit
-- Represents a hidden conservation law: **Divergence = -0.572222233 is conserved**
-
-## Output
-
-- **Plots**: Diagnostic curves saved as PNG files
-- **Journal**: Metrics appended to `growth_journal.jsonl` with label `RULE30_GEOMETRIC_TEST`
-- **Console**: Summary statistics printed to stdout
-
-## Example Output
-
-```
-Rule 30 Geometric Analysis Summary
-============================================================
-Steps: 1000
-Sequence length: 1000
-
-Divergence:
-  Mean: 0.023456
-  Std:  0.145678
-  Min:   -0.234567
-  Max:   0.345678
-
-Tension:
-  Mean: 0.012345
-  Std:  0.056789
-  Min:   0.000000
-  Max:   0.234567
-
-Basin Depth:
-  Mean: 0.345678
-  Std:  0.123456
-  Min:   0.123456
-  Max:   0.567890
-============================================================
-```
-
-## Integration with Livnium
-
-The Rule 30 sequence is embedded as a geometric path through the Livnium cube, allowing the existing Layer0/Layer1 diagnostic pipeline to analyze it. This enables detection of:
-
-- **Periodicity**: Regular patterns in divergence/tension curves
-- **Structure**: Hidden geometric patterns in the sequence
-- **Chaos**: Random-like behavior vs. structured behavior
-
-## Journal Format
-
-Each run appends a JSON line to `growth_journal.jsonl`:
-
-```json
-{
-  "timestamp": "2025-01-20T12:34:56.789012",
-  "run_type": "RULE30_GEOMETRIC_TEST",
-  "n_steps": 1000,
-  "sequence_length": 1000,
-  "metrics": {
-    "divergence": {"mean": 0.023, "std": 0.146, "min": -0.235, "max": 0.346},
-    "tension": {"mean": 0.012, "std": 0.057, "min": 0.0, "max": 0.235},
-    "basin_depth": {"mean": 0.346, "std": 0.123, "min": 0.123, "max": 0.568}
-  }
-}
-```
+1. Run complete analysis to identify all invariants
+2. Verify non-trivial invariants exhaustively
+3. Simplify invariants to human-readable form
+4. Document exact formulas and proof/verification status
 

@@ -8,6 +8,7 @@ This is a parameterized form that we can solve for invariance using linear algeb
 """
 
 from typing import Dict, List, Tuple
+from fractions import Fraction
 
 Pattern = Tuple[int, int, int]
 
@@ -74,6 +75,27 @@ def pattern_frequencies_3(row: List[int], cyclic: bool = True) -> Dict[Pattern, 
     return frequencies
 
 
+def pattern_frequencies_3_rational(row: List[int], cyclic: bool = True) -> Dict[Pattern, Fraction]:
+    """
+    Compute normalized frequencies as exact rationals.
+    
+    Args:
+        row: Binary row
+        cyclic: Use cyclic boundary conditions
+        
+    Returns:
+        Dict mapping pattern tuples to Fraction frequencies
+    """
+    counts = pattern_counts_3(row, cyclic=cyclic)
+    n = len(row)
+    
+    if n == 0:
+        return {p: Fraction(0) for p in enumerate_patterns()}
+    
+    frequencies = {pattern: Fraction(count, n) for pattern, count in counts.items()}
+    return frequencies
+
+
 def divergence_v3(row: List[int], weights: Dict[Pattern, float], cyclic: bool = True) -> float:
     """
     General 3-pattern divergence: D3(row) = Σ_p w_p · freq_p(row)
@@ -96,6 +118,28 @@ def divergence_v3(row: List[int], weights: Dict[Pattern, float], cyclic: bool = 
     return total
 
 
+def divergence_v3_rational(row: List[int], weights: Dict[Pattern, Fraction], cyclic: bool = True) -> Fraction:
+    """
+    Compute divergence using exact rational arithmetic.
+    
+    Args:
+        row: Binary row
+        weights: Dict mapping patterns to Fraction weights
+        cyclic: Use cyclic boundary conditions
+        
+    Returns:
+        Exact rational divergence value
+    """
+    frequencies = pattern_frequencies_3_rational(row, cyclic=cyclic)
+    
+    total = Fraction(0)
+    for pattern, freq in frequencies.items():
+        w = weights.get(pattern, Fraction(0))
+        total += w * freq
+    
+    return total
+
+
 def format_weights(weights: Dict[Pattern, float]) -> str:
     """Format weights as a readable formula."""
     terms = []
@@ -108,6 +152,25 @@ def format_weights(weights: Dict[Pattern, float]) -> str:
                 terms.append(f"-freq('{pattern_str}')")
             else:
                 terms.append(f"{w:.6f}*freq('{pattern_str}')")
+    
+    if not terms:
+        return "0"
+    
+    return " + ".join(terms)
+
+
+def format_weights_rational(weights: Dict[Pattern, Fraction]) -> str:
+    """Format rational weights as a readable formula."""
+    terms = []
+    for pattern, w in sorted(weights.items()):
+        if w != 0:
+            pattern_str = ''.join(str(b) for b in pattern)
+            if w == 1:
+                terms.append(f"freq('{pattern_str}')")
+            elif w == -1:
+                terms.append(f"-freq('{pattern_str}')")
+            else:
+                terms.append(f"({w})*freq('{pattern_str}')")
     
     if not terms:
         return "0"
