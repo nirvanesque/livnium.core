@@ -30,6 +30,12 @@ Research experiments exploring Livnium's capabilities across different domains.
   - Dynamic tension fields
   - Checkpoint system for long-running searches
 
+- **`rule30/`**: Rule 30 Invariant Analysis (Phase 1 Complete)
+  - 4 exact linear invariants of 3-bit pattern frequencies
+  - Exhaustively verified for all rows up to N=12
+  - Negative result: No 3-bit Markov closure possible
+  - Complete verification and analysis framework
+
 - **`nxn_demo/`**: N×N×N Cube Size Demonstrations
   - Demonstrates Omcubes (odd N ≥ 3) vs DataCubes (even N ≥ 2)
   - Protects core Livnium intellectual property

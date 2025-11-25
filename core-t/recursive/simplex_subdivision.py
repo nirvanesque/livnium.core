@@ -86,3 +86,5 @@ class SimplexSubdivision:
         # Future: could use lower dimension (D=2) for deeper recursion
         return "same_dimension"
 
+
+

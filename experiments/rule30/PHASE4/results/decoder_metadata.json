@@ -1,0 +1,19 @@
+{
+  "n_components": 8,
+  "train_ratio": 0.8,
+  "train_accuracy": 0.994,
+  "test_accuracy": 0.94,
+  "train_f1": 0.9938853503184714,
+  "test_f1": 0.94,
+  "data_source": "/Users/chetanpatil/Desktop/clean-nova-livnium/experiments/rule30/PHASE3/results",
+  "n_train": 8000,
+  "n_test": 2000,
+  "class_distribution_train": [
+    4072,
+    3928
+  ],
+  "class_distribution_test": [
+    993,
+    1007
+  ]
+}
