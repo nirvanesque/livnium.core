@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from experiments.rule30.rule30_core import generate_rule30
 from experiments.rule30.center_column import extract_center_column
+from experiments.rule30.rule30_optimized import generate_center_column_direct
 from experiments.rule30.geometry_embed import embed_into_cube
 from experiments.rule30.diagnostics import compute_all_diagnostics
 from experiments.rule30.recursive_embed import embed_recursive, analyze_recursive_patterns
@@ -391,15 +392,19 @@ Examples:
         save_stability_report(results, args.output_dir)
         return
     
-    print(f"Generating Rule 30 CA with {args.steps} steps...")
+    # Step 1: Generate Rule 30 center column
+    # Use optimized generator for large sequences (>= 10000 steps)
+    if args.steps >= 10000:
+        print(f"Generating Rule 30 center column (optimized for large sequences)...")
+        center_column = generate_center_column_direct(args.steps, show_progress=True)
+        print(f"Generated {len(center_column):,} bits")
+    else:
+        print(f"Generating Rule 30 CA with {args.steps} steps...")
+        triangle = generate_rule30(args.steps)
+        print(f"Generated triangle with {len(triangle)} rows")
+        center_column = extract_center_column(triangle)
+        print(f"Extracted center column: {len(center_column)} bits")
     
-    # Step 1: Generate Rule 30 triangle
-    triangle = generate_rule30(args.steps)
-    print(f"Generated triangle with {len(triangle)} rows")
-    
-    # Step 2: Extract center column
-    center_column = extract_center_column(triangle)
-    print(f"Extracted center column: {len(center_column)} bits")
     print(f"  First 20 bits: {center_column[:20]}")
     print(f"  Sum (ones): {sum(center_column)}")
     
