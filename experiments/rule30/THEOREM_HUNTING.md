@@ -119,9 +119,35 @@ for pattern, coeff in discovered_coefficients.items():
 print(f"Exact invariant: {exact_value}")
 ```
 
+## V2: Non-Linear Invariant Hunter
+
+Since linear invariants didn't work, we need to search for **non-linear** forms.
+
+**Key Insight**: The divergence invariant is NOT a linear combination of pattern frequencies. Pattern frequencies change, but divergence stays constant. This means the invariant is deeper - likely quadratic, angular, or structural.
+
+### Invariant Hunter V2 (`invariant_hunter_v2.py`)
+
+Searches for:
+- **Quadratic invariants**: `Σ α_p · freq_p + Σ β_pq · freq_p · freq_q`
+- **Cross-frequency invariants**: `freq('111') - freq('000')`, `freq('011') * freq('110')`
+- **Angular invariants**: Ratio-based and weighted angle combinations
+- **Polynomial invariants**: Higher-order combinations
+
+```bash
+python3 experiments/rule30/invariant_hunter_v2.py \
+    --steps 1000 10000 \
+    --types quadratic difference product \
+    --max-coeff 3
+```
+
+**Why V2?**
+- V1 found: No linear invariants (expected - pattern frequencies fluctuate)
+- V2 searches: Non-linear forms that capture the geometric/angular structure
+- Goal: Find the exact non-linear formula that gives constant value
+
 ## Next Steps After Discovery
 
-Once you have the exact formula `D(s) = Σ α_p · freq_p(s)`:
+Once you have the exact formula (linear or non-linear):
 
 1. **Derive Pattern Evolution**: How do pattern frequencies evolve under Rule 30?
    - Express `freq_p(t+1)` in terms of `freq_q(t)` for patterns `q` at time `t`
