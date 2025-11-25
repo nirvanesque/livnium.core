@@ -170,7 +170,20 @@ def find_invariant_pattern_combination(
         Dict with invariant formula and verification
     """
     # Compute divergences
-    from experiments.rule30.validate_invariant_direct import compute_direct_divergence
+    from experiments.rule30.diagnostics import create_sequence_vectors, _compute_field_divergence
+    
+    def compute_direct_divergence(seq: List[int], window_size: int = 5) -> float:
+        """Compute divergence directly from sequence."""
+        vectors = create_sequence_vectors(seq)
+        if len(vectors) < window_size:
+            return 0.0
+        divergence_values = []
+        for i in range(len(vectors) - window_size + 1):
+            window_vecs = vectors[i:i + window_size]
+            divergence = _compute_field_divergence(window_vecs, window_vecs)
+            divergence_values.append(divergence)
+        import numpy as np
+        return float(np.mean(divergence_values)) if divergence_values else 0.0
     
     rule30_divs = [compute_direct_divergence(seq) for seq in rule30_sequences]
     
