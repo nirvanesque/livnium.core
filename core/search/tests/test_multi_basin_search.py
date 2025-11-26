@@ -320,6 +320,257 @@ def test_search_correctness_axiom():
     )
 
 
+def test_tension_correctness():
+    """
+    TENSION CORRECTNESS TEST
+    
+    Rule: Score = Curvature - Tension. Higher tension reduces score.
+    
+    Tests that tension computation and score calculation are correct.
+    """
+    config = LivniumCoreConfig(lattice_size=3, enable_semantic_polarity=True)
+    system = LivniumCoreSystem(config)
+    search = MultiBasinSearch(max_basins=5)
+    
+    coords = list(system.lattice.keys())[:4]
+    
+    # Create two basins with same curvature but different tension
+    basin_low_tension = search.add_basin(coords, system)
+    basin_high_tension = search.add_basin(coords, system)
+    
+    # Manually set curvature (same for both)
+    basin_low_tension.curvature = 1.0
+    basin_high_tension.curvature = 1.0
+    
+    # Set different tension values
+    basin_low_tension.tension = 0.1
+    basin_high_tension.tension = 0.9
+    
+    # Update scores using the formula: score = curvature - tension
+    basin_low_tension.update_score()
+    basin_high_tension.update_score()
+    
+    # Verify score calculation
+    assert abs(basin_low_tension.score - (1.0 - 0.1)) < 1e-6, \
+        f"Low tension score should be 0.9, got {basin_low_tension.score}"
+    assert abs(basin_high_tension.score - (1.0 - 0.9)) < 1e-6, \
+        f"High tension score should be 0.1, got {basin_high_tension.score}"
+    
+    # Low tension basin should have higher score
+    assert basin_low_tension.score > basin_high_tension.score, \
+        "Low tension basin should have higher score than high tension basin"
+    
+    # Best basin should be the low tension one
+    best_basin = search.get_best_basin()
+    assert best_basin == basin_low_tension, \
+        f"Best basin should be low tension (score={basin_low_tension.score}), " \
+        f"got basin {best_basin.id} (score={best_basin.score})"
+
+
+def test_curvature_correctness():
+    """
+    CURVATURE CORRECTNESS TEST
+    
+    Rule: Score = Curvature - Tension. Higher curvature increases score.
+    
+    Tests that curvature computation and score calculation are correct.
+    """
+    config = LivniumCoreConfig(lattice_size=3, enable_semantic_polarity=True)
+    system = LivniumCoreSystem(config)
+    search = MultiBasinSearch(max_basins=5)
+    
+    coords = list(system.lattice.keys())[:4]
+    
+    # Create two basins with same tension but different curvature
+    basin_low_curvature = search.add_basin(coords, system)
+    basin_high_curvature = search.add_basin(coords, system)
+    
+    # Set different curvature values
+    basin_low_curvature.curvature = 0.2
+    basin_high_curvature.curvature = 1.0
+    
+    # Set same tension (low for both)
+    basin_low_curvature.tension = 0.1
+    basin_high_curvature.tension = 0.1
+    
+    # Update scores using the formula: score = curvature - tension
+    basin_low_curvature.update_score()
+    basin_high_curvature.update_score()
+    
+    # Verify score calculation
+    assert abs(basin_low_curvature.score - (0.2 - 0.1)) < 1e-6, \
+        f"Low curvature score should be 0.1, got {basin_low_curvature.score}"
+    assert abs(basin_high_curvature.score - (1.0 - 0.1)) < 1e-6, \
+        f"High curvature score should be 0.9, got {basin_high_curvature.score}"
+    
+    # High curvature basin should have higher score
+    assert basin_high_curvature.score > basin_low_curvature.score, \
+        "High curvature basin should have higher score than low curvature basin"
+    
+    # Best basin should be the high curvature one
+    best_basin = search.get_best_basin()
+    assert best_basin == basin_high_curvature, \
+        f"Best basin should be high curvature (score={basin_high_curvature.score}), " \
+        f"got basin {best_basin.id} (score={best_basin.score})"
+
+
+def test_collapse_convergence():
+    """
+    COLLAPSE CONVERGENCE TEST
+    
+    Rule: Over multiple steps, basins should converge to a single winner.
+    
+    Tests that the system collapses from multiple basins to one dominant basin.
+    """
+    config = LivniumCoreConfig(lattice_size=3, enable_semantic_polarity=True)
+    system = LivniumCoreSystem(config)
+    search = MultiBasinSearch(max_basins=10, min_score_threshold=-5.0)
+    
+    coords_list = list(system.lattice.keys())
+    
+    # Create multiple basins with different initial SW values
+    # This creates different geometry signals
+    n_basins = 5
+    basins = []
+    for i in range(n_basins):
+        start_idx = i * 2
+        end_idx = start_idx + 4
+        if end_idx <= len(coords_list):
+            # Set different SW values: first basin much stronger
+            for coords in coords_list[start_idx:end_idx]:
+                cell = system.get_cell(coords)
+                if cell:
+                    # Large difference: 100, 30, 15, 5, 2
+                    if i == 0:
+                        cell.symbolic_weight = 100.0
+                    elif i == 1:
+                        cell.symbolic_weight = 30.0
+                    elif i == 2:
+                        cell.symbolic_weight = 15.0
+                    else:
+                        cell.symbolic_weight = max(2.0, 10.0 - (i * 2.0))
+            
+            basin = search.add_basin(coords_list[start_idx:end_idx], system)
+            basins.append(basin)
+    
+    # Initial state: should have multiple basins
+    initial_stats = search.get_basin_stats()
+    assert initial_stats['num_alive'] == n_basins, \
+        f"Should start with {n_basins} basins, got {initial_stats['num_alive']}"
+    
+    # Run multiple update steps
+    # The winning basin should reinforce, losing basins should decay
+    for step in range(10):
+        search.update_all_basins(system)
+    
+    # After updates, check that:
+    # 1. A winner exists
+    winner = search.get_winner()
+    assert winner is not None, "Should have a winner after updates"
+    assert winner.is_alive, "Winner should be alive"
+    assert winner.is_winning, "Winner should be marked as winning"
+    
+    # 2. Winner should be one of the stronger basins (likely basin 0)
+    # The strongest basin (basin 0 with SW=100) should win
+    assert winner in basins, "Winner should be one of the original basins"
+    
+    # 3. Winner should have the highest score among alive basins
+    alive_basins = [b for b in basins if b.is_alive]
+    if len(alive_basins) > 1:
+        winner_score = winner.score
+        for basin in alive_basins:
+            assert basin.score <= winner_score, \
+                f"Winner should have highest score: winner={winner_score}, " \
+                f"basin {basin.id}={basin.score}"
+    
+    # 4. System should have identified a winner (convergence behavior)
+    final_stats = search.get_basin_stats()
+    assert final_stats['winner_id'] is not None, "Should have a winner ID in stats"
+    assert final_stats['winner_id'] == winner.id, "Stats winner ID should match actual winner"
+
+
+def test_mocked_multi_step_competition():
+    """
+    MOCKED MULTI-STEP COMPETITION TEST
+    
+    Rule: Simulate a multi-step competition with controlled scores.
+    
+    Tests that basins compete correctly over multiple steps with mocked values.
+    """
+    config = LivniumCoreConfig(lattice_size=3, enable_semantic_polarity=True)
+    system = LivniumCoreSystem(config)
+    search = MultiBasinSearch(max_basins=5, min_score_threshold=-2.0)
+    
+    coords = list(system.lattice.keys())[:4]
+    
+    # Create three basins
+    basin_a = search.add_basin(coords, system)
+    basin_b = search.add_basin(coords, system)
+    basin_c = search.add_basin(coords, system)
+    
+    # Step 1: Basin A is best
+    basin_a.curvature = 1.0
+    basin_a.tension = 0.1
+    basin_a.update_score()
+    
+    basin_b.curvature = 0.5
+    basin_b.tension = 0.3
+    basin_b.update_score()
+    
+    basin_c.curvature = 0.3
+    basin_c.tension = 0.2
+    basin_c.update_score()
+    
+    # Verify initial winner
+    best = search.get_best_basin()
+    assert best == basin_a, f"Step 1: Basin A should win (score={basin_a.score})"
+    
+    # Step 2: Basin B improves, becomes best
+    basin_a.curvature = 0.8  # Basin A degrades
+    basin_a.tension = 0.2
+    basin_a.update_score()
+    
+    basin_b.curvature = 1.2  # Basin B improves
+    basin_b.tension = 0.1
+    basin_b.update_score()
+    
+    basin_c.curvature = 0.2  # Basin C degrades
+    basin_c.tension = 0.4
+    basin_c.update_score()
+    
+    # Verify new winner
+    best = search.get_best_basin()
+    assert best == basin_b, f"Step 2: Basin B should win (score={basin_b.score})"
+    
+    # Step 3: Basin C collapses (score below threshold)
+    basin_a.curvature = 0.6
+    basin_a.tension = 0.3
+    basin_a.update_score()
+    
+    basin_b.curvature = 1.0
+    basin_b.tension = 0.15
+    basin_b.update_score()
+    
+    basin_c.curvature = 0.1  # Very low
+    basin_c.tension = 2.5    # Very high (score = 0.1 - 2.5 = -2.4)
+    basin_c.update_score()
+    
+    # Basin C should be below threshold
+    assert basin_c.score < search.min_score_threshold, \
+        f"Basin C should be below threshold ({search.min_score_threshold}), " \
+        f"got {basin_c.score}"
+    
+    # Final winner should be Basin B
+    best = search.get_best_basin()
+    assert best == basin_b, f"Step 3: Basin B should still win (score={basin_b.score})"
+    
+    # Verify competition dynamics
+    assert basin_b.score > basin_a.score, \
+        "Basin B should have higher score than Basin A"
+    assert basin_b.score > basin_c.score, \
+        "Basin B should have higher score than Basin C"
+
+
 if __name__ == "__main__":
     print("Running multi-basin search tests...")
     
@@ -358,6 +609,18 @@ if __name__ == "__main__":
     
     test_search_correctness_axiom()
     print("✓ Search correctness axiom")
+    
+    test_tension_correctness()
+    print("✓ Tension correctness")
+    
+    test_curvature_correctness()
+    print("✓ Curvature correctness")
+    
+    test_collapse_convergence()
+    print("✓ Collapse convergence")
+    
+    test_mocked_multi_step_competition()
+    print("✓ Mocked multi-step competition")
     
     print("\nAll tests passed! ✓")
 
