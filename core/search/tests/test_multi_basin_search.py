@@ -280,6 +280,46 @@ def test_basin_pruning():
         f"Should have at most {search.max_basins} alive basins, got {len(alive_basins)}"
 
 
+def test_search_correctness_axiom():
+    """
+    AXIOMATIC CORRECTNESS TEST
+    
+    Rule: The basin with the highest score must be selected as the winner.
+    
+    This removes all physics/geometry variables and tests the pure selection logic.
+    """
+    config = LivniumCoreConfig(lattice_size=3)
+    system = LivniumCoreSystem(config)
+    search = MultiBasinSearch(max_basins=5)
+    
+    # 1. Create two identical basins
+    coords = list(system.lattice.keys())[:4]
+    basin_a = search.add_basin(coords, system)
+    basin_b = search.add_basin(coords, system)
+    
+    # 2. Manually force the scores (Bypassing physics engine to test Selection Logic)
+    # Basin A is perfect (High score, Low tension)
+    basin_a.score = 1.0
+    basin_a.tension = 0.0
+    
+    # Basin B is terrible (Low score, High tension)
+    basin_b.score = 0.1
+    basin_b.tension = 0.9
+    
+    # 3. Force the internal list to reflect these updates
+    # (In a real run, update_all_basins does this, but we are testing selection)
+    
+    # 4. The Axiom: Get the best basin
+    best_basin = search.get_best_basin()
+    
+    # 5. The Assertion
+    # If this fails, the selection logic is mathematically broken.
+    assert best_basin == basin_a, (
+        f"Selection Logic Failure: Expected Basin A (Score 1.0), "
+        f"but got Basin {best_basin.id} (Score {best_basin.score})"
+    )
+
+
 if __name__ == "__main__":
     print("Running multi-basin search tests...")
     
@@ -315,6 +355,9 @@ if __name__ == "__main__":
     
     test_basin_pruning()
     print("✓ Basin pruning")
+    
+    test_search_correctness_axiom()
+    print("✓ Search correctness axiom")
     
     print("\nAll tests passed! ✓")
 
