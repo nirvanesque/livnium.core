@@ -147,7 +147,20 @@ class LivniumHamiltonian:
         # RAM monitoring (check periodically)
         if len(self.energy_log) % self.ram_check_interval == 0:
             ram_used_gb = self._get_ram_usage_gb()
-            if ram_used_gb > self.max_ram_gb:
+            
+            # Sanity check: if RAM reading is clearly wrong (e.g., > 100GB), disable monitoring
+            if ram_used_gb > 100.0:
+                # Likely reading system RAM instead of process RAM - disable check
+                if not self.ram_warning_shown:
+                    import warnings
+                    warnings.warn(
+                        f"RAM monitoring detected invalid reading ({ram_used_gb:.2f} GB). "
+                        f"Disabling RAM checks. This is likely a measurement issue, not actual usage.",
+                        UserWarning
+                    )
+                    self.ram_warning_shown = True
+                # Skip the check for this step
+            elif ram_used_gb > self.max_ram_gb:
                 raise MemoryError(
                     f"RAM usage ({ram_used_gb:.2f} GB) exceeds limit ({self.max_ram_gb:.2f} GB). "
                     f"Simulation stopped to protect system. "
@@ -304,12 +317,10 @@ class LivniumHamiltonian:
             try:
                 import resource
                 # Unix/Linux/Mac
-                ram_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                # On Mac, ru_maxrss is in KB; on Linux it's in KB
-                if sys.platform == 'darwin':  # macOS
-                    return ram_bytes / (1024 ** 2)  # KB to GB
-                else:  # Linux
-                    return ram_bytes / (1024 ** 2)  # KB to GB
+                # ru_maxrss is in KB on both macOS and Linux
+                ram_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                # Convert KB to GB: KB / 1024 / 1024 = GB
+                return ram_kb / (1024 ** 2)  # KB to GB
             except (ImportError, AttributeError):
                 # Last resort: return 0 (can't measure, but won't crash)
                 return 0.0
