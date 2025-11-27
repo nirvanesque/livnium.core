@@ -10,6 +10,7 @@ from typing import Dict, List, Tuple, Optional, Any
 from .temporal_engine import TemporalEngine, Timestep
 from ..classical.livnium_core_system import LivniumCoreSystem
 from ..config import LivniumCoreConfig
+from ..law.law_extractor import LivniumLawExtractor
 
 
 class Orchestrator:
@@ -35,6 +36,9 @@ class Orchestrator:
         
         # Initialize temporal engine
         self.temporal_engine = TemporalEngine()
+        
+        # Initialize law extractor (for auto-discovery of physical laws)
+        self.law_extractor = LivniumLawExtractor()
         
         # Layer references (lazy initialization)
         self.quantum_lattice = None
@@ -96,6 +100,10 @@ class Orchestrator:
             results.update(self._memory_update())
         else:
             results.update(self._semantic_update())
+        
+        # Record physics state for law extraction
+        physics_state = self.core_system.export_physics_state()
+        self.law_extractor.record_state(physics_state)
         
         return results
     
@@ -179,4 +187,22 @@ class Orchestrator:
             status['meta'] = self.meta_observer.get_meta_statistics()
         
         return status
+    
+    def extract_laws(self) -> Dict[str, any]:
+        """
+        Extract discovered physical laws from system behavior.
+        
+        Returns:
+            Dictionary with 'invariants' and 'relationships'
+        """
+        return self.law_extractor.extract()
+    
+    def get_law_summary(self) -> str:
+        """
+        Get human-readable summary of discovered laws.
+        
+        Returns:
+            String describing discovered laws
+        """
+        return self.law_extractor.get_law_summary()
 

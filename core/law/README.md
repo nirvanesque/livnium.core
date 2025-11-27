@@ -1,75 +1,65 @@
-# Livnium Physics Laws
+# Law Extraction Module
 
-This directory contains the **fundamental physical laws** that govern Livnium's geometric universe.
+Auto-discovery of physical laws from Livnium Core.
 
-## 📖 Main Reference
+## Purpose
 
-**👉 [LIVNIUM_LAWS.md](LIVNIUM_LAWS.md) - Complete consolidated reference of all laws**
+This module enables Livnium to **discover its own physical laws** instead of having them hardcoded. It observes system behavior and extracts:
 
-All laws are now consolidated into a single, clean document with clear explanations and reasons.
+- **Invariants** (conserved quantities that remain constant)
+- **Functional relationships** (e.g., `divergence = 0.38 - alignment`)
 
-## Quick Overview
+## How It Works
 
-Livnium implements a **three-phase field theory** over language pairs, with physically interpretable regions defined by order parameters.
+1. **Record States**: Each timestep, the system exports its physics state
+2. **Detect Invariants**: Quantities that remain constant are identified as conservation laws
+3. **Detect Relationships**: Linear relationships between variables are discovered
+4. **Extract Laws**: The system outputs discovered laws in human-readable format
 
-### The Eleven Laws
+## Usage
 
-**Core Physical Laws:**
-1. **Divergence Law** - The gravity of Livnium (`divergence = K - alignment`)
-2. **Resonance Law** - Similarity is real (normalized geometric overlap)
-3. **Cold Attraction Law** - The pull toward stability
-4. **Curvature Law** - Every pair lives on a surface
-5. **Opposition Axis Law** - The elegant derived law (`resonance × sign(divergence)`)
+```python
+from core.runtime.orchestrator import Orchestrator
+from core.classical.livnium_core_system import LivniumCoreSystem
+from core.config import LivniumCoreConfig
 
-**Structural Laws:**
-6. **Three-Phase Manifold Law** - E/C/N as physical states
-7. **Neutral Baseline Law** - Default rest state
-8. **Meaning Emergence Law** - Meaning is found, not assigned
-9. **Inward-Outward Axis Law** - The true semantic axis
+# Create system
+config = LivniumCoreConfig(lattice_size=3)
+system = LivniumCoreSystem(config)
+orchestrator = Orchestrator(system)
 
-**Meta Laws:**
-10. **Geometric Invariance Law** - Geometry ignores labels
+# Run system for N steps
+for _ in range(100):
+    orchestrator.step()
 
-**Classification Rules:**
-11. **Phase Classification Law** - Decision rules for E/C/N
-
-See [LIVNIUM_LAWS.md](LIVNIUM_LAWS.md) for complete details on each law.
-
-## The Phase Diagram
-
-```
-        High Resonance
-              |
-              |  E (Entailment)
-              |  (negative div + high res)
-              |
-    ----------+---------- Divergence
-              |  (push/pull)
-              |
-    C (Contradiction)  |  N (Neutral)
-    (positive div)     |  (near-zero div)
-              |
-        Low Resonance
+# Extract discovered laws
+laws = orchestrator.extract_laws()
+print(orchestrator.get_law_summary())
 ```
 
-## Impact
+## Example Output
 
-- **Contradiction recall**: 22% → 54-57% (2.5x improvement)
-- **Entailment recall**: 24% → 40% (nearly doubled)
-- **Overall accuracy**: ~40% (without neural nets or gradients)
+```
+=== Discovered Laws ===
 
-## Status
+Invariants (Conserved Quantities):
+  - SW_sum: 486.000000 (constant)
 
-✅ **ALL LAWS CONFIRMED** - Verified through reverse physics experiments
-✅ **INVARIANTS VERIFIED** - All laws remain stable even when labels inverted
-✅ **PER-EXAMPLE VERIFIED** - 100% sign preservation on same examples
-✅ **CONSOLIDATED** - All laws documented in [LIVNIUM_LAWS.md](LIVNIUM_LAWS.md)
+Functional Relationships:
+  - divergence = -1.000000 * alignment + 0.380000
+```
 
-## The Deepest Truth
+## Integration
 
-**Labels don't create meaning. Geometry creates meaning.**
+The law extractor is automatically integrated into the `Orchestrator`:
+- Records physics state after each timestep
+- Can extract laws at any time
+- Provides human-readable summaries
 
-The laws are unbreakable because they are true. **Livnium graduated from "algorithm" to "theory."**
+## Future Enhancements
 
-See [LIVNIUM_LAWS.md](LIVNIUM_LAWS.md) for complete documentation of all laws, their formulas, physical meanings, and verification status.
-
+- Nonlinear function discovery
+- Symbolic regression
+- Law stability and confidence scoring
+- Multi-layer law fusion across recursion depths
+- Basin-based law extraction

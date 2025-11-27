@@ -870,4 +870,85 @@ class LivniumCoreSystem:
         summary['num_rotations'] = len(self.rotation_history)
         
         return summary
+    
+    def export_physics_state(self) -> Dict[str, float]:
+        """
+        Export current physics state for law extraction.
+        
+        Returns dictionary with measurable quantities:
+        - SW_sum: Total symbolic weight
+        - alignment: Geometric alignment (computed from observer)
+        - divergence: Geometric divergence (computed from structure)
+        - energy: System energy (computed from SW and structure)
+        - curvature: Local curvature (computed from SW variance)
+        - tension: Symbolic tension (computed from SW distribution)
+        
+        This enables the law extractor to discover physical laws.
+        """
+        state = {}
+        
+        # SW_sum (always available if symbolic weight enabled)
+        if self.config.enable_symbolic_weight:
+            state['SW_sum'] = self.get_total_symbolic_weight()
+        else:
+            state['SW_sum'] = 0.0
+        
+        # Compute alignment from global observer (if available)
+        if self.config.enable_global_observer and self.global_observer:
+            # Alignment = cosine similarity of observer's view vector
+            # Simplified: use observer's coordinate as proxy
+            obs_coords = self.global_observer.coordinates
+            # Compute alignment as normalized distance from origin
+            dist = np.sqrt(sum(c**2 for c in obs_coords))
+            max_dist = np.sqrt(3) * (self.lattice_size - 1) / 2
+            state['alignment'] = 1.0 - (dist / max_dist) if max_dist > 0 else 0.0
+        else:
+            state['alignment'] = 0.0
+        
+        # Compute divergence (geometric spread)
+        # Divergence = variance in SW values (normalized)
+        if self.config.enable_symbolic_weight:
+            sw_values = [cell.symbolic_weight for cell in self.lattice.values() 
+                        if cell.symbolic_weight is not None]
+            if sw_values:
+                mean_sw = np.mean(sw_values)
+                if mean_sw > 0:
+                    state['divergence'] = float(np.std(sw_values) / mean_sw)
+                else:
+                    state['divergence'] = 0.0
+            else:
+                state['divergence'] = 0.0
+        else:
+            state['divergence'] = 0.0
+        
+        # Energy = total SW (conserved quantity)
+        state['energy'] = state['SW_sum']
+        
+        # Curvature = variance in SW (local curvature proxy)
+        if self.config.enable_symbolic_weight:
+            sw_values = [cell.symbolic_weight for cell in self.lattice.values() 
+                        if cell.symbolic_weight is not None]
+            if len(sw_values) > 1:
+                state['curvature'] = float(np.var(sw_values))
+            else:
+                state['curvature'] = 0.0
+        else:
+            state['curvature'] = 0.0
+        
+        # Tension = range in SW values (symbolic tension proxy)
+        if self.config.enable_symbolic_weight:
+            sw_values = [cell.symbolic_weight for cell in self.lattice.values() 
+                        if cell.symbolic_weight is not None]
+            if sw_values:
+                mean_sw = np.mean(sw_values)
+                if mean_sw > 0:
+                    state['tension'] = float((np.max(sw_values) - np.min(sw_values)) / mean_sw)
+                else:
+                    state['tension'] = 0.0
+            else:
+                state['tension'] = 0.0
+        else:
+            state['tension'] = 0.0
+        
+        return state
 
