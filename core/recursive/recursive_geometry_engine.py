@@ -14,6 +14,7 @@ from ..classical.livnium_core_system import LivniumCoreSystem, RotationAxis
 from .geometry_subdivision import GeometrySubdivision
 from .recursive_projection import RecursiveProjection
 from .recursive_conservation import RecursiveConservation
+from .inheritance import fabricate_child_universe
 
 
 @dataclass
@@ -63,7 +64,8 @@ class RecursiveGeometryEngine:
     def __init__(self, 
                  base_geometry: LivniumCoreSystem,
                  max_depth: int = 3,
-                 subdivision_rule: Optional[Callable] = None):
+                 subdivision_rule: Optional[Callable] = None,
+                 rng: Optional[np.random.Generator] = None):
         """
         Initialize recursive geometry engine.
         
@@ -71,10 +73,12 @@ class RecursiveGeometryEngine:
             base_geometry: Base Livnium Core System (Level 0)
             max_depth: Maximum recursion depth
             subdivision_rule: Optional custom subdivision rule
+            rng: Optional random number generator for inheritance
         """
         self.base_geometry = base_geometry
         self.max_depth = max_depth
         self.subdivision_rule = subdivision_rule or self._default_subdivision_rule
+        self.rng = rng or np.random.default_rng()
         
         # Create hierarchy
         self.levels: Dict[int, GeometryLevel] = {}
@@ -105,16 +109,18 @@ class RecursiveGeometryEngine:
         self._create_child_levels(level_0, depth=1)
     
     def _create_child_levels(self, parent_level: GeometryLevel, depth: int):
-        """Recursively create child levels."""
+        """Recursively create child levels with inheritance."""
         if depth > self.max_depth:
             return
         
         # Create child geometry for each cell in parent
         for coords, cell in parent_level.geometry.lattice.items():
-            # Subdivide: create smaller geometry inside this cell
+            # Subdivide: create smaller geometry inside this cell with inheritance
             child_geometry = self.subdivision_rule(parent_level.geometry, coords, depth)
             
             if child_geometry:
+                # Use depth as level_id (children at same depth share level_id)
+                # This matches the existing structure where levels are grouped by depth
                 child_level = GeometryLevel(
                     level_id=depth,
                     geometry=child_geometry,
@@ -122,6 +128,11 @@ class RecursiveGeometryEngine:
                     scale_factor=parent_level.geometry.config.lattice_size // child_geometry.config.lattice_size
                 )
                 parent_level.children[coords] = child_level
+                
+                # Register in levels dict (store first child as representative for this depth)
+                # We can iterate through parent.children to get all children at a given depth
+                if depth not in self.levels:
+                    self.levels[depth] = child_level  # Store first child as representative
                 
                 # Recursively create grandchildren
                 self._create_child_levels(child_level, depth + 1)

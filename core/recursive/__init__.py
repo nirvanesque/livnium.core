@@ -18,6 +18,7 @@ from .geometry_subdivision import GeometrySubdivision
 from .recursive_projection import RecursiveProjection
 from .recursive_conservation import RecursiveConservation
 from .moksha_engine import MokshaEngine, FixedPointState, ConvergenceState
+from .inheritance import fabricate_child_universe
 
 __all__ = [
     'RecursiveGeometryEngine',
@@ -27,5 +28,6 @@ __all__ = [
     'MokshaEngine',
     'FixedPointState',
     'ConvergenceState',
+    'fabricate_child_universe',
 ]
 
