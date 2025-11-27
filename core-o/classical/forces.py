@@ -1,11 +1,11 @@
 """
-Geometric Potential: The Laws of Physics for Livnium
+Livnium Geometric Laws: The Physics
 
 Derives forces purely from geometric gradients.
-Implements the Unified Principle: Minimizing Geometric Stress.
-
-No "Gravity Formula" - only Geometric Potential, from which gravity,
-repulsion, and pressure emerge automatically.
+Implements:
+1. Soft Repulsion (Pauli Exclusion)
+2. Geometric Gravity (Inward Fall via SW maximization)
+3. Smooth Differentiable Kernels
 """
 
 import numpy as np
@@ -17,7 +17,7 @@ class GeometricPotential:
     The 'Laws of Physics' for Livnium.
     
     Derives forces purely from geometric gradients.
-    Implements soft potentials to avoid gradient traps.
+    Implements the Unified Principle: Minimizing Geometric Stress.
     """
     
     def __init__(
@@ -49,34 +49,28 @@ class GeometricPotential:
         """
         A smooth differentiable kernel for SW calculation.
         
-        Returns: (value, derivative)
-        - 1.0 when touching (r = D)
-        - 0.0 at R_cut
-        - Smoothly differentiable everywhere (C² continuous)
-        
-        This ensures gradients are always finite.
-        
-        Args:
-            r: Distance between sphere centers
+        Returns: 
+            (value, derivative)
             
-        Returns:
-            Tuple of (kernel_value, derivative_d_value_d_r)
+        Logic:
+            1.0 when touching (r=D)
+            0.0 at cutoff (r=R_cut)
+            Uses cubic spline interpolation for smoothness.
         """
         if r >= self.R_cut:
             return 0.0, 0.0
         
-        if r < self.D:
-            # Inside the hard core, influence saturates at 1.0
-            # But we keep derivative distinct to avoid singularities.
-            # For simplicity, treat r < D same as surface for SW purposes.
-            r = self.D
+        # Clamp distance for kernel calculation to avoid singularities inside spheres
+        # We treat r < D as having max influence (1.0)
+        eff_r = max(r, self.D)
         
         # Normalized distance x in [0, 1]
-        # x = 0 at r=D (surface), x = 1 at r=R_cut
         dist_range = self.R_cut - self.D
-        x = (r - self.D) / dist_range
+        x = (eff_r - self.D) / dist_range
         
         # Cubic spline (smooth falloff): (1 - x)^3
+        # This guarantees value=1 at x=0, value=0 at x=1
+        # And derivative=0 at x=1 (smooth landing)
         val = (1.0 - x)**3
         
         # Derivative d(val)/dr = d(val)/dx * dx/dr
@@ -93,18 +87,8 @@ class GeometricPotential:
         """
         Computes Potentials and Forces for the N-body system.
         
-        Implements:
-        1. Repulsion (Hard Constraint) - prevents overlap
-        2. Geometric Gravity (Inward Fall) - density gradient attraction
-        
-        Args:
-            positions: Array of shape (N, 3) with sphere positions
-            
         Returns:
-            Tuple of (forces, potential_energy, current_sw)
-            - forces: Array of shape (N, 3) with force vectors
-            - potential_energy: Total potential energy
-            - current_sw: Array of shape (N,) with current SW values
+            forces (N,3), total_potential_energy, sw_values (N,)
         """
         N = len(positions)
         forces = np.zeros((N, 3))
@@ -113,10 +97,13 @@ class GeometricPotential:
         # Array to store current SW for each sphere
         current_sw = np.zeros(N)
         
-        # Pre-compute distances and vectors (Naive O(N^2) for clarity)
-        # In production, use Neighbor Lists (Verlet lists)
+        # Temporary storage for pairwise data to avoid re-calculating dists
+        # (i, j, r_hat, kernel_deriv)
+        pairs = []
+        
+        # --- PASS 1: Calculate Distances, Repulsion, and SW ---
         for i in range(N):
-            for j in range(i + 1, N):  # Exploiting symmetry i-j vs j-i
+            for j in range(i + 1, N):
                 r_vec = positions[i] - positions[j]
                 dist = np.linalg.norm(r_vec)
                 
@@ -125,10 +112,10 @@ class GeometricPotential:
                 
                 r_hat = r_vec / dist  # Direction j -> i
                 
-                # --- 1. Repulsion (Hard Constraint) ---
+                # A. Repulsion (Hard Constraint)
+                # V = 0.5 * k * overlap^2
                 if dist < self.D:
                     overlap = self.D - dist
-                    # V = 0.5 * k * overlap^2 (harmonic repulsion)
                     potential_energy += 0.5 * self.k_rep * overlap**2
                     
                     # F = - grad V = k * overlap * r_hat
@@ -136,60 +123,56 @@ class GeometricPotential:
                     forces[i] += f_push
                     forces[j] -= f_push
                 
-                # --- 2. Calculate SW Density (The "Metric") ---
-                # We interpret "Exposure" as "Connection Strength" to neighbors
-                # SW = Sum of kernels
-                val, deriv = self._kernel_smooth_step(dist)
-                
-                if val > 0:
+                # B. SW Density Accumulation
+                if dist < self.R_cut:
+                    val, deriv = self._kernel_smooth_step(dist)
                     current_sw[i] += val
                     current_sw[j] += val
+                    
+                    # Store data for Gravity Pass
+                    pairs.append((i, j, r_hat, deriv))
         
-        # --- 3. Geometric Gravity (The Inward Fall) ---
-        # Potential U = 0.5 * k_grav * sum( (SW_i - Target)^2 )
-        # Force_i = - sum_k ( dU/dSW_k * dSW_k/dr_i )
+        # --- PASS 2: Geometric Gravity (The Inward Fall) ---
+        # The system wants to minimize (SW - Target)^2
+        # Force depends on the SW "deficit" of BOTH interacting particles.
         
         for i in range(N):
-            # Energy of sphere i due to density mismatch
+            # Energy due to density mismatch
             diff = current_sw[i] - self.sw_target
             potential_energy += 0.5 * self.k_grav * diff**2
         
-        # Gradient Pass
-        for i in range(N):
-            for j in range(i + 1, N):
-                r_vec = positions[i] - positions[j]
-                dist = np.linalg.norm(r_vec)
-                
-                if dist >= self.R_cut:
-                    continue
-                
-                r_hat = r_vec / dist
-                
-                _, deriv = self._kernel_smooth_step(dist)
-                # deriv is d(Kernel)/dr
-                
-                # Chain Rule Application:
-                # Interaction between i and j affects BOTH SW_i and SW_j.
-                # Force on i comes from:
-                # 1. i trying to fix its own SW (SW_i)
-                # 2. i trying to fix j's SW (SW_j) - Newton's 3rd Law
-                
-                diff_i = current_sw[i] - self.sw_target
-                diff_j = current_sw[j] - self.sw_target
-                
-                # F_gravity = - (k * diff_i * deriv + k * diff_j * deriv) * r_hat
-                # If diff is negative (under-dense), we want attraction.
-                # deriv is negative (kernel decreases with distance).
-                # So if diff < 0 and deriv < 0, product is positive.
-                # We need attraction (force opposite to r_hat).
-                
-                f_grav_mag = self.k_grav * (diff_i + diff_j) * deriv
-                
-                # Apply force
-                f_vec = f_grav_mag * r_hat  # deriv is negative, so this pulls inward
-                
-                forces[i] -= f_vec
-                forces[j] += f_vec
+        for (i, j, r_hat, deriv) in pairs:
+            # Chain Rule for Gravity Gradient:
+            # Interaction i-j contributes to SW_i AND SW_j.
+            # We must pull them together if EITHER needs more density.
+            
+            diff_i = current_sw[i] - self.sw_target
+            diff_j = current_sw[j] - self.sw_target
+            
+            # Combined Gradient Magnitude
+            # deriv is negative (kernel drops with distance)
+            # diff is negative (if under-dense)
+            # We want attraction -> Force opposite to r_hat (separation vector)
+            
+            f_grav_mag = self.k_grav * (diff_i + diff_j) * deriv
+            
+            # Apply force
+            # if deriv < 0 and diff < 0 (needs neighbors), f_grav_mag > 0.
+            # We want attraction. r_hat points j->i.
+            # Force on i should be toward j (-r_hat).
+            # Wait, let's check signs carefully:
+            # Force = - dV/dr
+            # V ~ (SW - T)^2
+            # dV/dr = 2 * (SW - T) * dSW/dr
+            # dSW/dr = deriv (negative)
+            # (SW - T) is negative.
+            # Result: dV/dr is Positive.
+            # Force is Negative (Attractive). 
+            # So we subtract from i (toward j) and add to j.
+            
+            f_vec = f_grav_mag * r_hat
+            
+            forces[i] -= f_vec
+            forces[j] += f_vec
         
         return forces, potential_energy, current_sw
-
