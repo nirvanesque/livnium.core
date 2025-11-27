@@ -9,7 +9,16 @@ Doesn't know about spheres or SW - just integrates momentum and applies thermost
 
 import numpy as np
 from typing import Dict, Optional
+import os
+import sys
 from .forces import GeometricPotential
+
+# Try to import psutil for better RAM monitoring, fall back to basic method
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
 
 
 class LivniumHamiltonian:
@@ -33,8 +42,10 @@ class LivniumHamiltonian:
         mass: Optional[np.ndarray] = None,
         positions: Optional[np.ndarray] = None,
         max_spheres: int = 500,
-        enable_performance_monitoring: bool = True
-    ):
+            enable_performance_monitoring: bool = True,
+            max_ram_gb: float = 8.0,
+            ram_check_interval: int = 10
+        ):
         """
         Initialize Hamiltonian engine.
         
@@ -51,6 +62,8 @@ class LivniumHamiltonian:
             positions: Optional initial positions (default: random)
             max_spheres: Maximum N for naive O(N²) solver (safety limit)
             enable_performance_monitoring: Track step times and warn if slow
+            max_ram_gb: Maximum RAM usage in GB before auto-kill (default: 8.0)
+            ram_check_interval: Check RAM every N steps (default: 10)
         """
         # Safety: Limit N for naive O(N²) solver
         if n_spheres > max_spheres:
@@ -105,6 +118,11 @@ class LivniumHamiltonian:
         self.energy_log = []
         self.step_times = []  # Performance monitoring
         self.slow_step_warning_shown = False
+        
+        # RAM monitoring
+        self.max_ram_gb = max_ram_gb
+        self.ram_check_interval = ram_check_interval
+        self.ram_warning_shown = False
     
     def step(self) -> Dict:
         """
@@ -125,6 +143,24 @@ class LivniumHamiltonian:
         """
         import time
         step_start = time.time()
+        
+        # RAM monitoring (check periodically)
+        if len(self.energy_log) % self.ram_check_interval == 0:
+            ram_used_gb = self._get_ram_usage_gb()
+            if ram_used_gb > self.max_ram_gb:
+                raise MemoryError(
+                    f"RAM usage ({ram_used_gb:.2f} GB) exceeds limit ({self.max_ram_gb:.2f} GB). "
+                    f"Simulation stopped to protect system. "
+                    f"Reduce N or enable neighbor lists for larger systems."
+                )
+            elif ram_used_gb > self.max_ram_gb * 0.8 and not self.ram_warning_shown:
+                import warnings
+                warnings.warn(
+                    f"RAM usage is high: {ram_used_gb:.2f} GB / {self.max_ram_gb:.2f} GB limit. "
+                    f"Consider reducing N or stopping soon.",
+                    UserWarning
+                )
+                self.ram_warning_shown = True
         
         dt = self.dt
         
@@ -249,5 +285,47 @@ class LivniumHamiltonian:
             'total_steps': len(self.energy_log),
             'estimated_pairs_per_step': self.N * (self.N - 1) // 2,
             'pairs_per_second': (self.N * (self.N - 1) // 2) / np.mean(step_times) if np.mean(step_times) > 0 else 0
+        }
+    
+    def _get_ram_usage_gb(self) -> float:
+        """
+        Get current RAM usage in GB for this process.
+        
+        Returns:
+            RAM usage in GB
+        """
+        if HAS_PSUTIL:
+            # Use psutil for accurate process memory
+            process = psutil.Process(os.getpid())
+            ram_bytes = process.memory_info().rss  # Resident Set Size
+            return ram_bytes / (1024 ** 3)  # Convert to GB
+        else:
+            # Fallback: platform-specific methods
+            try:
+                import resource
+                # Unix/Linux/Mac
+                ram_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                # On Mac, ru_maxrss is in KB; on Linux it's in KB
+                if sys.platform == 'darwin':  # macOS
+                    return ram_bytes / (1024 ** 2)  # KB to GB
+                else:  # Linux
+                    return ram_bytes / (1024 ** 2)  # KB to GB
+            except (ImportError, AttributeError):
+                # Last resort: return 0 (can't measure, but won't crash)
+                return 0.0
+    
+    def get_ram_usage(self) -> Dict:
+        """
+        Get current RAM usage information.
+        
+        Returns:
+            Dictionary with RAM usage stats
+        """
+        ram_used = self._get_ram_usage_gb()
+        return {
+            'ram_used_gb': ram_used,
+            'ram_limit_gb': self.max_ram_gb,
+            'ram_percent': (ram_used / self.max_ram_gb * 100) if self.max_ram_gb > 0 else 0,
+            'has_psutil': HAS_PSUTIL
         }
 

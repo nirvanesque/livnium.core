@@ -106,11 +106,60 @@ while True:
     universe.step()  # Will freeze your machine
 ```
 
+## RAM Protection (Auto Kill Switch)
+
+The system automatically monitors RAM usage and stops if it exceeds the limit.
+
+### Default: 8GB Limit
+
+```python
+# Automatically checks RAM every 10 steps
+universe = LivniumHamiltonian(n_spheres=50)  # Default: 8GB limit
+
+# Custom limit
+universe = LivniumHamiltonian(n_spheres=50, max_ram_gb=16.0)  # 16GB limit
+```
+
+### What Happens
+
+1. **RAM Check:** Every 10 steps, the system checks RAM usage
+2. **Warning (80%):** If RAM > 80% of limit, shows warning
+3. **Auto-Kill (100%):** If RAM > limit, raises `MemoryError` and stops simulation
+
+### Example
+
+```python
+universe = LivniumHamiltonian(n_spheres=50, max_ram_gb=8.0)
+
+try:
+    for i in range(1000):
+        universe.step()
+except MemoryError as e:
+    print(f"Simulation stopped: {e}")
+    # System is safe - simulation stopped before RAM overflow
+```
+
+### Check RAM Usage
+
+```python
+ram_info = universe.get_ram_usage()
+print(f"RAM: {ram_info['ram_used_gb']:.2f} GB / {ram_info['ram_limit_gb']:.2f} GB")
+```
+
+### Optional: Install psutil for Better Monitoring
+
+```bash
+pip install psutil
+```
+
+With `psutil`, RAM monitoring is more accurate. Without it, the system uses platform-specific methods (still works, but less precise).
+
 ## Summary
 
 - ✅ Your laptop is safe
 - ✅ Built-in limits protect you
 - ✅ Performance monitoring warns you
+- ✅ **RAM auto-kill switch protects memory**
 - ✅ Ctrl+C stops safely
 - ✅ No permanent damage possible
 
