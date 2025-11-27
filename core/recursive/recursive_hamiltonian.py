@@ -22,26 +22,50 @@ def _import_hamiltonian():
     if HAS_HAMILTONIAN:
         return True  # Already imported
     
-    # Import from core-o
+    # Import from core-o using importlib for more reliable path handling
     # File is at: core/recursive/recursive_hamiltonian.py
-    # Need to go up to project root, then into core-o
-    project_root = Path(__file__).parent.parent.parent.parent
+    # Need to go up 3 levels to reach project root
+    project_root = Path(__file__).parent.parent.parent
     core_o_path = project_root / "core-o"
+    hamiltonian_file = core_o_path / "classical" / "hamiltonian_core.py"
     
-    # Add core-o to path (must be first so 'classical' resolves correctly)
+    if not hamiltonian_file.exists():
+        HAS_HAMILTONIAN = False
+        _import_error = f"File not found: {hamiltonian_file}"
+        return False
+    
+    # Add core-o to path
     if str(core_o_path) not in sys.path:
         sys.path.insert(0, str(core_o_path))
     
     try:
-        # Import like core-o scripts do: from classical.hamiltonian_core
-        from classical.hamiltonian_core import LivniumHamiltonian as _LivniumHamiltonian
-        LivniumHamiltonian = _LivniumHamiltonian
+        # Try direct import
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "classical.hamiltonian_core",
+            str(hamiltonian_file)
+        )
+        if spec is None or spec.loader is None:
+            raise ImportError("Could not load spec")
+        
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["classical.hamiltonian_core"] = module
+        spec.loader.exec_module(module)
+        
+        LivniumHamiltonian = module.LivniumHamiltonian
         HAS_HAMILTONIAN = True
         return True
-    except ImportError as e:
-        HAS_HAMILTONIAN = False
-        _import_error = str(e)
-        return False
+    except Exception as e:
+        # Fallback: try normal import
+        try:
+            from classical.hamiltonian_core import LivniumHamiltonian as _LivniumHamiltonian
+            LivniumHamiltonian = _LivniumHamiltonian
+            HAS_HAMILTONIAN = True
+            return True
+        except ImportError as e2:
+            HAS_HAMILTONIAN = False
+            _import_error = f"{str(e)}; {str(e2)}"
+            return False
 
 
 class RecursiveHamiltonian:
