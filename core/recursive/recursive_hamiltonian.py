@@ -10,25 +10,38 @@ import numpy as np
 import sys
 from pathlib import Path
 
-# Import from core-o (need to add core-o to path)
-# File is at: core/recursive/recursive_hamiltonian.py
-# Need to go up to project root, then into core-o
-project_root = Path(__file__).parent.parent.parent.parent
-core_o_path = project_root / "core-o"
-sys.path.insert(0, str(core_o_path))
+# Lazy import - will be done in __init__
+LivniumHamiltonian = None
+HAS_HAMILTONIAN = False
+_import_error = None
 
-try:
-    from classical.hamiltonian_core import LivniumHamiltonian
-    HAS_HAMILTONIAN = True
-except ImportError:
-    # Try alternative import path
+def _import_hamiltonian():
+    """Lazy import of Hamiltonian core from core-o."""
+    global LivniumHamiltonian, HAS_HAMILTONIAN, _import_error
+    
+    if HAS_HAMILTONIAN:
+        return True  # Already imported
+    
+    # Import from core-o
+    # File is at: core/recursive/recursive_hamiltonian.py
+    # Need to go up to project root, then into core-o
+    project_root = Path(__file__).parent.parent.parent.parent
+    core_o_path = project_root / "core-o"
+    
+    # Add core-o to path (must be first so 'classical' resolves correctly)
+    if str(core_o_path) not in sys.path:
+        sys.path.insert(0, str(core_o_path))
+    
     try:
-        sys.path.insert(0, str(project_root))
-        from core_o.classical.hamiltonian_core import LivniumHamiltonian
+        # Import like core-o scripts do: from classical.hamiltonian_core
+        from classical.hamiltonian_core import LivniumHamiltonian as _LivniumHamiltonian
+        LivniumHamiltonian = _LivniumHamiltonian
         HAS_HAMILTONIAN = True
-    except ImportError:
+        return True
+    except ImportError as e:
         HAS_HAMILTONIAN = False
-        print("Warning: core-o Hamiltonian not available. Recursive dynamics disabled.")
+        _import_error = str(e)
+        return False
 
 
 class RecursiveHamiltonian:
@@ -61,8 +74,12 @@ class RecursiveHamiltonian:
             dt: Time step
             enable_dynamics: Whether to enable Hamiltonian evolution
         """
-        if not HAS_HAMILTONIAN:
-            raise ImportError("core-o Hamiltonian core not available. Cannot enable recursive dynamics.")
+        # Try to import Hamiltonian if not already done
+        if not _import_hamiltonian():
+            error_msg = "core-o Hamiltonian core not available. Cannot enable recursive dynamics."
+            if _import_error:
+                error_msg += f" Import error: {_import_error}"
+            raise ImportError(error_msg)
         
         self.recursive_engine = recursive_engine
         self.temp = temp
