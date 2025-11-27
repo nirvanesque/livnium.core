@@ -132,7 +132,7 @@ def discover_moksha_laws():
         
         if step % 50 == 0:
             print(f"   Step {step}: SW={total_sw:.2f}, std={std_sw:.2f}, "
-                  f"converged={moksha_state.converged}")
+                  f"converged={converged}, stability={stability_score:.3f}")
     
     print()
     
