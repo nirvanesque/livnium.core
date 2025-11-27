@@ -148,8 +148,9 @@ class LivniumHamiltonian:
         if len(self.energy_log) % self.ram_check_interval == 0:
             ram_used_gb = self._get_ram_usage_gb()
             
-            # Sanity check: if RAM reading is clearly wrong (e.g., > 100GB), disable monitoring
-            if ram_used_gb > 100.0:
+            # Sanity check FIRST: if RAM reading is clearly wrong (e.g., > 50GB), disable monitoring
+            # This catches cases where we're reading system RAM instead of process RAM
+            if ram_used_gb > 50.0:
                 # Likely reading system RAM instead of process RAM - disable check
                 if not self.ram_warning_shown:
                     import warnings
@@ -159,7 +160,7 @@ class LivniumHamiltonian:
                         UserWarning
                     )
                     self.ram_warning_shown = True
-                # Skip the check for this step
+                # Skip the check for this step - don't raise error
             elif ram_used_gb > self.max_ram_gb:
                 raise MemoryError(
                     f"RAM usage ({ram_used_gb:.2f} GB) exceeds limit ({self.max_ram_gb:.2f} GB). "
