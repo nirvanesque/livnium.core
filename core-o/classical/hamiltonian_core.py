@@ -31,7 +31,9 @@ class LivniumHamiltonian:
         k_gravity: float = 2.0,
         sw_target: float = 12.0,
         mass: Optional[np.ndarray] = None,
-        positions: Optional[np.ndarray] = None
+        positions: Optional[np.ndarray] = None,
+        max_spheres: int = 500,
+        enable_performance_monitoring: bool = True
     ):
         """
         Initialize Hamiltonian engine.
@@ -47,10 +49,30 @@ class LivniumHamiltonian:
             sw_target: Target SW density
             mass: Optional mass array (default: all ones)
             positions: Optional initial positions (default: random)
+            max_spheres: Maximum N for naive O(N²) solver (safety limit)
+            enable_performance_monitoring: Track step times and warn if slow
         """
+        # Safety: Limit N for naive O(N²) solver
+        if n_spheres > max_spheres:
+            raise ValueError(
+                f"n_spheres={n_spheres} exceeds safety limit of {max_spheres}. "
+                f"This would require ~{n_spheres * (n_spheres - 1) // 2:,} pair computations per step. "
+                f"Use neighbor lists (Verlet/cell lists) for larger systems, or increase max_spheres if you know what you're doing."
+            )
+        
+        if n_spheres > 300:
+            import warnings
+            warnings.warn(
+                f"Large system (N={n_spheres}): O(N²) solver will be slow. "
+                f"Consider using neighbor lists for better performance.",
+                UserWarning
+            )
+        
         # Configuration
         self.N = n_spheres
         self.dt = dt
+        self.max_spheres = max_spheres
+        self.enable_performance_monitoring = enable_performance_monitoring
         
         # Thermodynamics
         self.temperature = temp  # T
@@ -81,6 +103,8 @@ class LivniumHamiltonian:
         # Metrics
         self.time = 0.0
         self.energy_log = []
+        self.step_times = []  # Performance monitoring
+        self.slow_step_warning_shown = False
     
     def step(self) -> Dict:
         """
@@ -97,7 +121,11 @@ class LivniumHamiltonian:
             - potential_energy: Potential energy
             - avg_sw: Average SW density
             - positions: Current positions
+            - step_time: Time taken for this step (seconds)
         """
+        import time
+        step_start = time.time()
+        
         dt = self.dt
         
         # 1. First Half-Kick (Hamiltonian)
@@ -131,12 +159,33 @@ class LivniumHamiltonian:
         kinetic_energy = 0.5 * np.sum(self.p**2 / self.mass[:, None])
         total_energy = kinetic_energy + pot_energy
         
+        # Performance monitoring
+        step_time = time.time() - step_start
+        self.step_times.append(step_time)
+        
+        # Keep only last 100 step times
+        if len(self.step_times) > 100:
+            self.step_times = self.step_times[-100:]
+        
+        # Warn if step is taking too long (> 1 second)
+        if self.enable_performance_monitoring:
+            if step_time > 1.0 and not self.slow_step_warning_shown:
+                import warnings
+                warnings.warn(
+                    f"Step taking {step_time:.2f}s (very slow for N={self.N}). "
+                    f"Consider reducing N or using neighbor lists. "
+                    f"Press Ctrl+C to interrupt if needed.",
+                    UserWarning
+                )
+                self.slow_step_warning_shown = True
+        
         self.energy_log.append({
             'time': self.time,
             'total_energy': total_energy,
             'kinetic_energy': kinetic_energy,
             'potential_energy': pot_energy,
-            'avg_sw': np.mean(sw)
+            'avg_sw': np.mean(sw),
+            'step_time': step_time
         })
         
         return {
@@ -146,7 +195,8 @@ class LivniumHamiltonian:
             'potential_energy': pot_energy,
             'avg_sw': np.mean(sw),
             'sw': sw.copy(),
-            'positions': self.q.copy()
+            'positions': self.q.copy(),
+            'step_time': step_time
         }
     
     def get_energy_history(self) -> Dict:
@@ -154,7 +204,7 @@ class LivniumHamiltonian:
         Get energy history for analysis.
         
         Returns:
-            Dictionary with arrays of time, energies, and SW
+            Dictionary with arrays of time, energies, SW, and step times
         """
         if not self.energy_log:
             return {
@@ -162,7 +212,8 @@ class LivniumHamiltonian:
                 'total_energy': np.array([]),
                 'kinetic_energy': np.array([]),
                 'potential_energy': np.array([]),
-                'avg_sw': np.array([])
+                'avg_sw': np.array([]),
+                'step_time': np.array([])
             }
         
         return {
@@ -170,6 +221,33 @@ class LivniumHamiltonian:
             'total_energy': np.array([e['total_energy'] for e in self.energy_log]),
             'kinetic_energy': np.array([e['kinetic_energy'] for e in self.energy_log]),
             'potential_energy': np.array([e['potential_energy'] for e in self.energy_log]),
-            'avg_sw': np.array([e['avg_sw'] for e in self.energy_log])
+            'avg_sw': np.array([e['avg_sw'] for e in self.energy_log]),
+            'step_time': np.array([e.get('step_time', 0.0) for e in self.energy_log])
+        }
+    
+    def get_performance_stats(self) -> Dict:
+        """
+        Get performance statistics.
+        
+        Returns:
+            Dictionary with performance metrics
+        """
+        if not self.step_times:
+            return {
+                'avg_step_time': 0.0,
+                'min_step_time': 0.0,
+                'max_step_time': 0.0,
+                'total_steps': 0,
+                'estimated_pairs_per_step': self.N * (self.N - 1) // 2
+            }
+        
+        step_times = np.array(self.step_times)
+        return {
+            'avg_step_time': float(np.mean(step_times)),
+            'min_step_time': float(np.min(step_times)),
+            'max_step_time': float(np.max(step_times)),
+            'total_steps': len(self.energy_log),
+            'estimated_pairs_per_step': self.N * (self.N - 1) // 2,
+            'pairs_per_second': (self.N * (self.N - 1) // 2) / np.mean(step_times) if np.mean(step_times) > 0 else 0
         }
 
