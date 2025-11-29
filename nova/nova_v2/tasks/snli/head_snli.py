@@ -13,12 +13,14 @@ class SNLIHead(nn.Module):
     """
     SNLI classification head.
     
-    Adds explicit directional signals:
+    Adds explicit directional and radial signals:
     - alignment between premise (OM) and hypothesis (LO)
     - opposition between -premise and hypothesis
     - energy feature from alignment (scaled exposure)
+    - distance and norms capturing radial geometry
     
-    Final features: [h_final, alignment, opposition, energy] → logits (E, N, C)
+    Final features: [h_final, alignment, opposition, energy, expose_neg,
+                     dist_p_h, r_p, r_h, r_final] → logits (E, N, C)
     """
     
     def __init__(self, dim: int):
@@ -29,8 +31,8 @@ class SNLIHead(nn.Module):
             dim: Dimension of input state vector
         """
         super().__init__()
-        # Linear layer: (dim + 3) → 3 (entailment, neutral, contradiction)
-        self.fc = nn.Linear(dim + 3, 3)
+        # Linear layer: (dim + 8) → 3 (entailment, neutral, contradiction)
+        self.fc = nn.Linear(dim + 8, 3)
     
     def forward(self, h_final: torch.Tensor, v_p: torch.Tensor, v_h: torch.Tensor) -> torch.Tensor:
         """
@@ -60,6 +62,26 @@ class SNLIHead(nn.Module):
         
         # Exposure/energy from alignment: map [-1,1] → [0,1], then scale
         energy = 9 * ((1 + align) / 2)
+        expose_neg = (1 - align) / 2
         
-        features = torch.cat([h_final, align, opp, energy], dim=-1)
+        # Radial geometry: distance and norms
+        dist_p_h = (v_h - v_p).norm(p=2, dim=-1, keepdim=True)
+        r_p = v_p.norm(p=2, dim=-1, keepdim=True)
+        r_h = v_h.norm(p=2, dim=-1, keepdim=True)
+        r_final = h_final.norm(p=2, dim=-1, keepdim=True)
+        
+        # Minimal, less-redundant feature set:
+        # features = torch.cat([h_final, align, dist_p_h, r_final], dim=-1)
+        # Using full set for now (alignment/energy/opposition/radials) for continuity.
+        features = torch.cat([
+            h_final,
+            align,
+            opp,
+            energy,
+            expose_neg,
+            dist_p_h,
+            r_p,
+            r_h,
+            r_final
+        ], dim=-1)
         return self.fc(features)

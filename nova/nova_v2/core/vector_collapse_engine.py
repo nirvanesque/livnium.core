@@ -5,6 +5,36 @@ Implements the collapse process that evolves a state vector h through L steps.
 Each step applies physics laws (alignment, divergence, tension) to modify the state.
 
 This is the heart of Livnium Core v1.0.
+
+# Short design note for Codex:
+# λ-free interaction: force = (0.38 - cosθ) * normalize(vj - vi)
+# 0.38 is the semantic equilibrium; geometry itself sets the strength.
+
+# === Multi-Vector Geometry: Design Note for Codex ===================================
+# The collapse engine must support REAL geometry, not just a single vector vs anchor.
+#
+# Required behavior:
+#   • Every vector interacts with every other vector using a pure geometric force.
+#   • No λ, no tunable constants. The geometry ALONE sets the strength.
+#
+# Pairwise interaction law (Livnium Divergence Law):
+#     align_ij = cosine_similarity(v_i, v_j)
+#     d_ij = 0.38 - align_ij              # 0.38 is the semantic equilibrium
+#     F_ij = d_ij * normalize(v_j - v_i)  # attraction / neutral / repulsion
+#
+# Update rule for ALL vectors:
+#     v_i ← v_i + Σ_j F_ij
+#
+# Requirements:
+#   • Must handle a batch of B vectors: shape [B, dim]
+#   • Compute pairwise forces with broadcasting (no Python loops)
+#   • Preserve norms softly (keep ||v|| ≤ 10)
+#   • No overlap resolution → the force law itself produces separation (kissing behavior)
+#
+# Summary:
+#   Add pairwise collapse: each vector evolves based on the 0.38 − cosθ force from all others.
+#   This creates emergent geometry: clustering, repulsion, equilibrium shells, natural basins.
+# =======================================================================================
 """
 
 import torch
