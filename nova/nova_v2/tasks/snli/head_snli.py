@@ -16,8 +16,9 @@ class SNLIHead(nn.Module):
     Adds explicit directional signals:
     - alignment between premise (OM) and hypothesis (LO)
     - opposition between -premise and hypothesis
+    - energy feature from alignment (scaled exposure)
     
-    Final features: [h_final, alignment, opposition] → logits (E, N, C)
+    Final features: [h_final, alignment, opposition, energy] → logits (E, N, C)
     """
     
     def __init__(self, dim: int):
@@ -28,8 +29,8 @@ class SNLIHead(nn.Module):
             dim: Dimension of input state vector
         """
         super().__init__()
-        # Linear layer: (dim + 2) → 3 (entailment, neutral, contradiction)
-        self.fc = nn.Linear(dim + 2, 3)
+        # Linear layer: (dim + 3) → 3 (entailment, neutral, contradiction)
+        self.fc = nn.Linear(dim + 3, 3)
     
     def forward(self, h_final: torch.Tensor, v_p: torch.Tensor, v_h: torch.Tensor) -> torch.Tensor:
         """
@@ -57,5 +58,8 @@ class SNLIHead(nn.Module):
         align = (v_p_n * v_h_n).sum(dim=-1, keepdim=True)  # cos(OM, LO)
         opp = (-v_p_n * v_h_n).sum(dim=-1, keepdim=True)   # cos(-OM, LO)
         
-        features = torch.cat([h_final, align, opp], dim=-1)
+        # Exposure/energy from alignment: map [-1,1] → [0,1], then scale
+        energy = 9 * ((1 + align) / 2)
+        
+        features = torch.cat([h_final, align, opp, energy], dim=-1)
         return self.fc(features)
