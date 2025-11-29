@@ -5,7 +5,6 @@
 ## Architecture
 
 ### Layer 0: Core Physics (Frozen)
-- `core/vector_state.py` - State representation
 - `core/physics_laws.py` - Core laws (divergence = 0.38 - alignment)
 - `core/vector_collapse_engine.py` - Collapse dynamics
 
@@ -32,24 +31,24 @@
 ### 1. Train SNLI
 
 ```bash
-python3 nova_v2/training/train_snli_vector.py \
-  --snli-train nova/data/snli/snli_1.0_train.jsonl \
-  --snli-dev nova/data/snli/snli_1.0_dev.jsonl \
+cd nova/nova_v2
+python3 training/train_snli_vector.py \
+  --snli-train data/snli/snli_1.0_train.jsonl \
+  --snli-dev data/snli/snli_1.0_dev.jsonl \
   --max-samples 10000 \
   --dim 256 \
-  --num-layers 6 \
   --batch-size 32 \
   --epochs 10 \
-  --lr 1e-3 \
-  --output-dir nova_v2/model/snli_v1
+  --output-dir model/snli_v1
 ```
 
 ### 2. Test SNLI
 
 ```bash
-python3 nova_v2/chat/test_snli_vector.py \
-  --model-dir nova_v2/model/snli_v1 \
-  --snli-test nova/data/snli/snli_1.0_test.jsonl \
+cd nova/nova_v2
+python3 chat/test_snli_vector.py \
+  --model-dir model/snli_v1 \
+  --snli-test data/snli/snli_1.0_test.jsonl \
   --max-samples 1000
 ```
 
@@ -106,4 +105,3 @@ nova_v2/
 - This is the **last big conceptual rebuild**
 - Next changes should be **tuning**, not **ontology changes**
 - The core is **frozen** - no more redesigns
-
