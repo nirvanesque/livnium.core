@@ -13,12 +13,15 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader
 
-# Add nova_v3 to path
+# Add nova_v3 and repo root (/nova) to path so quantum_embed is discoverable
 nova_v3_root = Path(__file__).parent.parent
+repo_root = nova_v3_root.parent
 sys.path.insert(0, str(nova_v3_root))
+sys.path.insert(0, str(repo_root))
 
 from core import VectorCollapseEngine
-from tasks.snli import SNLIEncoder, GeometricSNLIEncoder, SanskritSNLIEncoder, SNLIHead
+from tasks.snli import SNLIEncoder, GeometricSNLIEncoder, SanskritSNLIEncoder, QuantumSNLIEncoder, SNLIHead
+from quantum_embed.text_encoder_quantum import QuantumTextEncoder
 from utils.vocab import Vocabulary
 from training.train_snli_vector import SNLIDataset, load_snli_data
 
@@ -67,6 +70,25 @@ def main():
     encoder_type = getattr(model_args, "encoder_type", "legacy")
     vocab_id_to_token = vocab.id_to_token_list() if hasattr(vocab, "id_to_token_list") else None
 
+    # Build encode_fn for quantum checkpoints (vocab is None in that setting)
+    encode_fn = None
+    quantum_ckpt = getattr(model_args, "quantum_ckpt", None)
+    quantum_tokenizer = None
+    if encoder_type == "quantum":
+        if not quantum_ckpt:
+            raise ValueError("encoder_type=quantum requires quantum_ckpt in the saved args")
+        quantum_tokenizer = QuantumTextEncoder(quantum_ckpt)
+
+        def quantum_encode(text: str, max_len: int = args.max_len):
+            tokens = quantum_tokenizer.tokenize(text)
+            ids = [quantum_tokenizer.word2idx.get(t, quantum_tokenizer.unk_idx) for t in tokens]
+            ids = ids[:max_len]
+            if len(ids) < max_len:
+                ids.extend([quantum_tokenizer.pad_idx] * (max_len - len(ids)))
+            return ids
+
+        encode_fn = quantum_encode
+
     if encoder_type == "geom":
         encoder = GeometricSNLIEncoder(
             dim=model_args.dim,
@@ -84,13 +106,21 @@ def main():
             ),
         ).to(device)
     elif encoder_type == "sanskrit":
+        if vocab is None:
+            raise ValueError("Sanskrit encoder requires a saved vocabulary")
         encoder = SanskritSNLIEncoder(
             vocab_size=len(vocab),
             dim=model_args.dim,
             pad_idx=vocab.pad_idx,
             id_to_token=vocab_id_to_token,
         ).to(device)
+    elif encoder_type == "quantum":
+        encoder = QuantumSNLIEncoder(
+            ckpt_path=quantum_ckpt,
+        ).to(device)
     else:
+        if vocab is None:
+            raise ValueError("Legacy encoder requires a saved vocabulary")
         encoder = SNLIEncoder(
             vocab_size=len(vocab), 
             dim=model_args.dim,
@@ -113,7 +143,7 @@ def main():
     print(f"Loaded {len(test_samples)} test samples")
     
     # Create dataset
-    test_dataset = SNLIDataset(test_samples, vocab, max_len=args.max_len)
+    test_dataset = SNLIDataset(test_samples, vocab, max_len=args.max_len, encode_fn=encode_fn)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
     
     # Evaluate

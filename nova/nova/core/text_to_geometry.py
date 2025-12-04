@@ -20,9 +20,12 @@ from typing import List, Tuple, Optional, Dict
 import sys
 from pathlib import Path
 
-# Add project root to path (go up two levels: core -> nova -> project_root)
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+# Add repository root and package root to sys.path so top-level modules resolve
+repo_root = Path(__file__).resolve().parents[3]
+package_root = repo_root / "nova"
+for path in (str(repo_root), str(package_root)):
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 from core.classical.livnium_core_system import LivniumCoreSystem, LivniumCoreConfig
 from nova.core.geometric_token_learner import GeometricTokenLearner
@@ -472,4 +475,3 @@ class TextToGeometry:
         # This enables angular variation between premise/hypothesis
         if self.break_symmetry_for_snli:
             self._apply_symmetry_breaking()
-

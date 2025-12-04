@@ -143,7 +143,8 @@ class SentenceDecoder:
             print(f"✓ Learned {len(self.word_patterns)} word patterns")
             print(f"✓ Vocabulary: {len(self.vocabulary)} words")
     
-    def generate_from_signature(self, signature: np.ndarray) -> str:
+    def generate_from_signature(self, signature: np.ndarray, max_tokens: int = 15,
+                                temperature: float = 0.7, repetition_penalty: float = 0.1) -> str:
         """
         Generate NEW sentence from signature using learned patterns.
         
@@ -153,6 +154,12 @@ class SentenceDecoder:
         Args:
             signature: Geometric signature to generate from
         
+        Args:
+            signature: Geometric signature to generate from
+            max_tokens: Maximum tokens to emit (trimmed softly)
+            temperature: Unused (kept for API parity with cluster decoder)
+            repetition_penalty: Unused (kept for API parity)
+
         Returns:
             Generated sentence (empty if no patterns learned)
         """
@@ -188,8 +195,10 @@ class SentenceDecoder:
         
         # If we have words, build sentence
         if generated_words:
+            if max_tokens is not None and max_tokens > 0:
+                generated_words = generated_words[:max_tokens]
             # Use learned sequences to connect words
-            sentence_words = self._build_sentence_from_words(generated_words)
+            sentence_words = self._build_sentence_from_words(generated_words, max_tokens)
             sentence = " ".join(sentence_words)
         else:
             # No words generated - return empty
@@ -228,7 +237,7 @@ class SentenceDecoder:
         
         return closest_key
     
-    def _build_sentence_from_words(self, words: List[str]) -> List[str]:
+    def _build_sentence_from_words(self, words: List[str], max_tokens: Optional[int] = None) -> List[str]:
         """Build sentence using learned word sequences."""
         if not words:
             return []
@@ -259,7 +268,8 @@ class SentenceDecoder:
                 sentence.append(current_word)
         
         # Limit length
-        return sentence[:15]
+        limit = max_tokens if max_tokens is not None else 15
+        return sentence[:limit]
     
     def decode(self, signature: np.ndarray, **kwargs) -> str:
         """
@@ -272,4 +282,4 @@ class SentenceDecoder:
         Returns:
             Generated sentence
         """
-        return self.generate_from_signature(signature)
+        return self.generate_from_signature(signature, **kwargs)

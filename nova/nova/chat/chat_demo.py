@@ -8,9 +8,12 @@ import sys
 from pathlib import Path
 import argparse
 
-# Add project root to path (go up two levels: chat -> nova -> project_root)
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+# Add repository root and package root to sys.path for local execution
+repo_root = Path(__file__).resolve().parents[3]
+package_root = repo_root / "nova"
+for path in (str(repo_root), str(package_root)):
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 from nova.core.text_to_geometry import TextToGeometry
 from nova.chat.reply_generator import ReplyGenerator
