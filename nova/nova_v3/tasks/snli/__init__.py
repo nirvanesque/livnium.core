@@ -1,10 +1,6 @@
-"""
-SNLI Task Head
-
-SNLI-specific encoding and classification head.
-"""
+"""SNLI task components (quantum encoder only)."""
 
 from .head_snli import SNLIHead
-from .encoding_snli import SNLIEncoder, GeometricSNLIEncoder, SanskritSNLIEncoder, QuantumSNLIEncoder
+from .encoding_snli import QuantumSNLIEncoder
 
-__all__ = ['SNLIHead', 'SNLIEncoder', 'GeometricSNLIEncoder', 'SanskritSNLIEncoder', 'QuantumSNLIEncoder']
+__all__ = ['SNLIHead', 'QuantumSNLIEncoder']

@@ -1,17 +1,13 @@
 """
-Quantum-Inspired Embedding Trainer (Livnium v0.1)
+Quantum-Inspired Embedding Trainer (Livnium v0.1) [M5 Optimized]
 
-Trains word embeddings on WikiText-103 using a Livnium-style energy:
-    alignment a = cos(v_i, v_j)
-    divergence d = 0.38 - a
-    positive energy  E_pos = d^2
-    negative energy  E_neg = max(0, d_margin - d_neg)^2
+Trains word embeddings on WikiText-103 using a Livnium-style energy.
+Optimized for Apple Silicon (MPS) with memory pinning and parallel loading.
 
-This produces an embedding matrix that is "shaped" by the divergence law,
-ready to be plugged into nova_v3's encoder as a pretrained table.
+UPDATED: Supports "Static Collapse" mode where physics runs (on GPU) 
+but dynamic spawning (CPU bottleneck) is disabled.
 """
 
-import math
 import os
 import argparse
 from typing import List, Dict, Tuple
@@ -20,11 +16,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
+from tqdm import tqdm
 
+from vector_collapse import VectorCollapseEngine
+from basin_field import BasinField
 
-# -----------------------
-#  Utility: Vocab
-# -----------------------
 
 class Vocab:
     def __init__(self, max_size: int = 50000, min_freq: int = 1):
@@ -50,7 +46,6 @@ class Vocab:
             self.freqs[tok] = self.freqs.get(tok, 0) + 1
 
     def build(self):
-        # Sort by frequency
         sorted_items = sorted(self.freqs.items(), key=lambda x: -x[1])
         for tok, freq in sorted_items:
             if freq < self.min_freq:
@@ -76,25 +71,10 @@ class Vocab:
         return [self.word2idx.get(tok, self.unk_idx) for tok in line.strip().split() if tok]
 
 
-# -----------------------
-#  Dataset: Skip-gram pairs
-# -----------------------
-
 class SkipGramDataset(Dataset):
-    """
-    Simple Skip-Gram style dataset over tokenized WikiText.
-
-    For each sentence:
-        tokens = [w0, w1, ..., wn]
-    For each index i:
-        center = tokens[i]
-        context = tokens[j] for j in window around i
-
-    Returns (center_idx, context_idx) pairs.
-    """
-
     def __init__(self, sequences: List[List[int]], window_size: int = 2):
         self.pairs: List[Tuple[int, int]] = []
+        print(f"[SkipGramDataset] generating pairs from {len(sequences)} sequences...")
         for seq in sequences:
             for i, c in enumerate(seq):
                 if c == 0:
@@ -105,7 +85,6 @@ class SkipGramDataset(Dataset):
                     if j == i:
                         continue
                     self.pairs.append((c, seq[j]))
-        # store as tensors later
         print(f"[SkipGramDataset] total pairs: {len(self.pairs)}")
 
     def __len__(self) -> int:
@@ -115,34 +94,18 @@ class SkipGramDataset(Dataset):
         return self.pairs[idx]
 
 
-# -----------------------
-#  Model: Embedding Table
-# -----------------------
-
 class QuantumEmbeddingModel(nn.Module):
-    """
-    Simple embedding matrix trained with Livnium energy.
-
-    - embeddings: [vocab_size, dim]
-    """
-
     def __init__(self, vocab_size: int, dim: int = 256, pad_idx: int = 0):
         super().__init__()
         self.vocab_size = vocab_size
         self.dim = dim
         self.pad_idx = pad_idx
         self.emb = nn.Embedding(vocab_size, dim, padding_idx=pad_idx)
-
-        # Initialize with small norm to make early divergence stable
         nn.init.normal_(self.emb.weight, mean=0.0, std=0.05)
 
     def forward(self, idxs: torch.Tensor) -> torch.Tensor:
         return self.emb(idxs)
 
-
-# -----------------------
-#  Livnium Energy Loss
-# -----------------------
 
 def livnium_energy_loss(
     model: QuantumEmbeddingModel,
@@ -152,40 +115,73 @@ def livnium_energy_loss(
     d_margin: float = 0.4,
     neg_weight: float = 5.0,
     norm_reg_weight: float = 1e-4,
+    collapse_engine: VectorCollapseEngine = None,
+    basin_field: BasinField = None,
+    use_dynamic_basins: bool = False,
+    global_step: int = 0,
+    spawn_new: bool = True,
+    prune_every: int = 0,
 ) -> torch.Tensor:
-    """
-    Quantum-inspired Skip-gram loss using Livnium divergence.
-
-    centers, positives, negatives: [batch]
-    """
-
-    # [batch, dim]
+    
+    # 1. Look up raw embeddings
     v_c = model(centers)
     v_p = model(positives)
     v_n = model(negatives)
 
-    # Normalize for cosine
+    # 2. Apply Collapse Physics (If engine exists)
+    if use_dynamic_basins and collapse_engine is not None and basin_field is not None:
+        # --- DYNAMIC MODE (Slower, Adaptive Topology) ---
+        labels_pos = torch.zeros(centers.size(0), dtype=torch.long, device=centers.device)
+        labels_neg = torch.ones(centers.size(0), dtype=torch.long, device=centers.device)
+
+        v_c_pos, _ = collapse_engine.collapse_dynamic(
+            v_c, labels_pos, basin_field, global_step=global_step,
+            spawn_new=spawn_new, prune_every=prune_every, update_anchors=True,
+        )
+        v_p, _ = collapse_engine.collapse_dynamic(
+            v_p, labels_pos, basin_field, global_step=global_step,
+            spawn_new=spawn_new, prune_every=0, update_anchors=True,
+        )
+        v_c_neg, _ = collapse_engine.collapse_dynamic(
+            v_c.detach(), labels_neg, basin_field, global_step=global_step,
+            spawn_new=spawn_new, prune_every=0, update_anchors=True,
+        )
+        v_n, _ = collapse_engine.collapse_dynamic(
+            v_n, labels_neg, basin_field, global_step=global_step,
+            spawn_new=spawn_new, prune_every=prune_every, update_anchors=True,
+        )
+        v_c = v_c_pos
+        v_c_for_neg = v_c_neg
+
+    elif collapse_engine is not None:
+        # --- STATIC MODE (Fast, GPU-friendly Physics) ---
+        # No basin field, just pure Vector Collapse mechanics
+        # Collapses vectors towards the 3 learned static anchors (E/N/C)
+        v_c, _ = collapse_engine(v_c)
+        v_p, _ = collapse_engine(v_p)
+        v_n, _ = collapse_engine(v_n)
+        v_c_for_neg = v_c
+        
+    else:
+        # --- RAW MODE (Standard Skip-Gram) ---
+        v_c_for_neg = v_c
+
+    # 3. Compute Energy
     v_c_n = F.normalize(v_c, dim=-1)
     v_p_n = F.normalize(v_p, dim=-1)
     v_n_n = F.normalize(v_n, dim=-1)
+    v_c_neg_n = F.normalize(v_c_for_neg, dim=-1)
 
-    # Alignment
-    a_pos = (v_c_n * v_p_n).sum(dim=-1)  # [batch]
-    a_neg = (v_c_n * v_n_n).sum(dim=-1)
+    a_pos = (v_c_n * v_p_n).sum(dim=-1)
+    a_neg = (v_c_neg_n * v_n_n).sum(dim=-1)
 
-    # Livnium divergence
     d_pos = 0.38 - a_pos
     d_neg = 0.38 - a_neg
 
-    # Positive energy: want d_pos → 0
     E_pos = d_pos.pow(2)
-
-    # Negative energy: want d_neg ≥ d_margin
-    # If d_neg < d_margin, penalize
     diff = torch.clamp(d_margin - d_neg, min=0.0)
     E_neg = diff.pow(2)
 
-    # Norm regularization: keep embeddings from exploding
     norm = v_c.norm(dim=-1) + v_p.norm(dim=-1) + v_n.norm(dim=-1)
     norm_reg = norm.mean()
 
@@ -193,13 +189,8 @@ def livnium_energy_loss(
     return loss
 
 
-# -----------------------
-#  Training Loop
-# -----------------------
-
 def build_vocab_and_sequences(path: str, max_lines: int, max_size: int) -> Tuple[Vocab, List[List[int]]]:
     vocab = Vocab(max_size=max_size, min_freq=2)
-
     print(f"[build_vocab] scanning {path}...")
     lines: List[str] = []
     with open(path, "r", encoding="utf-8") as f:
@@ -211,142 +202,155 @@ def build_vocab_and_sequences(path: str, max_lines: int, max_size: int) -> Tuple
                 continue
             lines.append(line)
             vocab.add_tokens_from_line(line)
-
     vocab.build()
     print(f"[build_vocab] vocab size: {len(vocab)}")
-
     sequences: List[List[int]] = [vocab.encode_line(line) for line in lines]
     print(f"[build_vocab] sequences: {len(sequences)}")
     return vocab, sequences
 
 
 def sample_negative(batch_size: int, vocab_size: int, pad_idx: int, device: torch.device) -> torch.Tensor:
-    # Uniform negatives excluding pad_idx
     neg = torch.randint(low=0, high=vocab_size, size=(batch_size,), device=device)
     neg = torch.where(neg == pad_idx, (neg + 1) % vocab_size, neg)
     return neg
 
 
 def train(
-    train_path: str,
-    output_dir: str,
-    dim: int = 256,
-    max_vocab: int = 50000,
-    max_lines: int = 200000,
-    window_size: int = 2,
-    batch_size: int = 1024,
-    epochs: int = 3,
-    lr: float = 3e-4,
-    device: str = "cpu",
+    train_path: str, output_dir: str, dim: int = 256, max_vocab: int = 50000,
+    max_lines: int = 200000, window_size: int = 2, batch_size: int = 1024,
+    epochs: int = 3, lr: float = 3e-4, device: str = "auto",
+    disable_dynamic_basins: bool = False, collapse_layers: int = 4,
+    strength_entail: float = 0.1, strength_contra: float = 0.1,
+    strength_neutral: float = 0.05, basin_max_per_label: int = 64,
+    basin_tension_threshold: float = 0.15, basin_align_threshold: float = 0.6,
+    basin_anchor_lr: float = 0.05, basin_prune_every: int = 0,
+    basin_prune_min_count: int = 10, basin_merge_cos_threshold: float = 0.97,
 ):
     os.makedirs(output_dir, exist_ok=True)
-    device = torch.device(device)
+    if device == "auto":
+        device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
+        print(f"🚀 Device Activated: {device}")
+    else:
+        device = torch.device(device)
 
-    # 1) Build vocab + sequences
-    vocab, sequences = build_vocab_and_sequences(
-        train_path, max_lines=max_lines, max_size=max_vocab
+    vocab, sequences = build_vocab_and_sequences(train_path, max_lines=max_lines, max_size=max_vocab)
+    dataset = SkipGramDataset(sequences, window_size=window_size)
+    loader = DataLoader(
+        dataset, batch_size=batch_size, shuffle=True, drop_last=True,
+        num_workers=4, pin_memory=True, persistent_workers=True,
     )
 
-    # 2) Build dataset + dataloader
-    dataset = SkipGramDataset(sequences, window_size=window_size)
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
-
-    # 3) Model
     model = QuantumEmbeddingModel(vocab_size=len(vocab), dim=dim, pad_idx=vocab.pad_idx).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
+    use_dynamic_basins = not disable_dynamic_basins
+    basin_field = BasinField(max_basins_per_label=basin_max_per_label).to(device) if use_dynamic_basins else None
+    
+    # Initialize Collapse Engine ALWAYS if layers > 0
+    # This allows "Static Collapse" even if Dynamic Basins are disabled
+    collapse_engine = None
+    if collapse_layers > 0:
+        collapse_engine = VectorCollapseEngine(
+            dim=dim, num_layers=collapse_layers,
+            strength_entail=strength_entail, strength_contra=strength_contra,
+            strength_neutral=strength_neutral,
+            basin_tension_threshold=basin_tension_threshold,
+            basin_align_threshold=basin_align_threshold,
+            basin_anchor_lr=basin_anchor_lr,
+            basin_prune_min_count=basin_prune_min_count,
+            basin_prune_merge_cos=basin_merge_cos_threshold,
+        ).to(device)
+        print(f"[init] Collapse Engine Active (Layers: {collapse_layers}, Dynamic: {use_dynamic_basins})")
+
     print(f"[train] device={device}, vocab={len(vocab)}, dim={dim}, batches={len(loader)}")
 
-    # 4) Train
     global_step = 0
     for epoch in range(1, epochs + 1):
         model.train()
         total_loss = 0.0
-        for centers, contexts in loader:
-            centers = centers.to(device)
-            contexts = contexts.to(device)
-            negatives = sample_negative(
-                batch_size=centers.size(0),
-                vocab_size=len(vocab),
-                pad_idx=vocab.pad_idx,
-                device=device,
-            )
+        pbar = tqdm(loader, desc=f"Epoch {epoch}/{epochs}", leave=True, unit="batch")
+
+        for step, (centers, contexts) in enumerate(pbar):
+            centers = centers.to(device, non_blocking=True)
+            contexts = contexts.to(device, non_blocking=True)
+            negatives = sample_negative(centers.size(0), len(vocab), vocab.pad_idx, device)
 
             optimizer.zero_grad()
-            loss = livnium_energy_loss(model, centers, contexts, negatives)
+            loss = livnium_energy_loss(
+                model, centers, contexts, negatives,
+                collapse_engine=collapse_engine,
+                basin_field=basin_field,
+                use_dynamic_basins=use_dynamic_basins,
+                global_step=global_step,
+                spawn_new=use_dynamic_basins,
+                prune_every=basin_prune_every,
+            )
             loss.backward()
             optimizer.step()
 
             total_loss += loss.item()
-            global_step += 1
+            global_step += centers.size(0)
+            pbar.set_postfix(loss=f"{total_loss / (step + 1):.4f}", step=global_step)
 
-            if global_step % 200 == 0:
-                avg = total_loss / 200
-                print(f"[epoch {epoch}] step {global_step} avg_loss={avg:.4f}")
-                total_loss = 0.0
-
-        # Save checkpoint per epoch
         ckpt_path = os.path.join(output_dir, f"quantum_embed_epoch{epoch}.pt")
-        torch.save(
-            {
-                "state_dict": model.state_dict(),
-                "vocab": {
-                    "idx2word": vocab.idx2word,
-                    "pad_idx": vocab.pad_idx,
-                    "unk_idx": vocab.unk_idx,
-                },
-                "dim": dim,
-            },
-            ckpt_path,
-        )
-        print(f"[train] saved {ckpt_path}")
-
-    # final embedding table
-    final_path = os.path.join(output_dir, "quantum_embeddings_final.pt")
-    torch.save(
-        {
-            "embeddings": model.emb.weight.detach().cpu(),
-            "vocab": {
-                "idx2word": vocab.idx2word,
-                "pad_idx": vocab.pad_idx,
-                "unk_idx": vocab.unk_idx,
-            },
+        torch.save({
+            "state_dict": model.state_dict(),
+            "vocab": {"idx2word": vocab.idx2word, "pad_idx": vocab.pad_idx, "unk_idx": vocab.unk_idx},
             "dim": dim,
-        },
-        final_path,
-    )
+            "use_dynamic_basins": use_dynamic_basins,
+            "collapse_engine": collapse_engine.state_dict() if collapse_engine else None,
+            "basin_field": basin_field.state_dict() if basin_field else None,
+            "collapse_config": {
+                "num_layers": collapse_layers, "strength_entail": strength_entail,
+                "strength_contra": strength_contra, "strength_neutral": strength_neutral
+            },
+        }, ckpt_path)
+        print(f"[train] saved {ckpt_path}")
+        if use_dynamic_basins and basin_field:
+            counts = {l: len(basin_field.anchors[l]) for l in ["E", "N", "C"]}
+            print(f"[train] basin counts E/N/C: {counts['E']} / {counts['N']} / {counts['C']}")
+
+    final_path = os.path.join(output_dir, "quantum_embeddings_final.pt")
+    torch.save({
+        "embeddings": model.emb.weight.detach().cpu(),
+        "vocab": {"idx2word": vocab.idx2word, "pad_idx": vocab.pad_idx, "unk_idx": vocab.unk_idx},
+        "dim": dim,
+        "use_dynamic_basins": use_dynamic_basins,
+        "collapse_engine": collapse_engine.state_dict() if collapse_engine else None,
+        "basin_field": basin_field.state_dict() if basin_field else None,
+    }, final_path)
     print(f"[train] saved final embeddings to {final_path}")
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--train-path", type=str, required=True,
-                        help="Path to wiki.train.tokens")
+    parser = argparse.ArgumentParser(description="Quantum-Inspired Embedding Trainer [M5 Optimized]")
+    parser.add_argument("--train-path", type=str, required=True)
     parser.add_argument("--output-dir", type=str, required=True)
     parser.add_argument("--dim", type=int, default=256)
     parser.add_argument("--max-vocab", type=int, default=50000)
-    parser.add_argument("--max-lines", type=int, default=200000,
-                        help="Max lines from WikiText to load (0 = all)")
+    parser.add_argument("--max-lines", type=int, default=200000)
     parser.add_argument("--window-size", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=1024)
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--lr", type=float, default=3e-4)
-    parser.add_argument("--device", type=str, default="cpu")
+    parser.add_argument("--device", type=str, default="auto")
+    parser.add_argument("--disable-dynamic-basins", action="store_true", help="Disable dynamic spawning.")
+    parser.add_argument("--collapse-layers", type=int, default=4, help="Number of collapse steps.")
+    # ... other args same as before ...
+    # Simplified parser block for brevity, ensure all args from before are included
+    parser.add_argument("--strength-entail", type=float, default=0.1)
+    parser.add_argument("--strength-contra", type=float, default=0.1)
+    parser.add_argument("--strength-neutral", type=float, default=0.05)
+    parser.add_argument("--basin-max-per-label", type=int, default=64)
+    parser.add_argument("--basin-tension-threshold", type=float, default=0.15)
+    parser.add_argument("--basin-align-threshold", type=float, default=0.6)
+    parser.add_argument("--basin-anchor-lr", type=float, default=0.05)
+    parser.add_argument("--basin-prune-every", type=int, default=0)
+    parser.add_argument("--basin-prune-min-count", type=int, default=10)
+    parser.add_argument("--basin-merge-cos-threshold", type=float, default=0.97)
+
     args = parser.parse_args()
-
-    train(
-        train_path=args.train_path,
-        output_dir=args.output_dir,
-        dim=args.dim,
-        max_vocab=args.max_vocab,
-        max_lines=args.max_lines,
-        window_size=args.window_size,
-        batch_size=args.batch_size,
-        epochs=args.epochs,
-        lr=args.lr,
-        device=args.device,
-    )
-
+    train(**vars(args))
 
 if __name__ == "__main__":
     main()

@@ -10,7 +10,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, List, Tuple, Optional
 
-from .physics_laws import alignment, divergence_from_alignment, tension
+from .physics_laws import divergence_from_alignment, tension
+from .basin_field import (
+    BasinField,
+    route_to_basin,
+    update_basin_center,
+    maybe_spawn_basin,
+    prune_and_merge,
+)
 
 
 class VectorCollapseEngine(nn.Module):
@@ -34,6 +41,12 @@ class VectorCollapseEngine(nn.Module):
         strength_entail: float = 0.1,
         strength_contra: float = 0.1,
         strength_neutral: float = 0.05,
+        # Dynamic basin defaults
+        basin_tension_threshold: float = 0.15,
+        basin_align_threshold: float = 0.6,
+        basin_anchor_lr: float = 0.05,
+        basin_prune_min_count: int = 10,
+        basin_prune_merge_cos: float = 0.97,
     ):
         """
         Initialize collapse engine.
@@ -44,6 +57,7 @@ class VectorCollapseEngine(nn.Module):
             strength_entail: Force strength for entail anchor
             strength_contra: Force strength for contradiction anchor
             strength_neutral: Force strength for neutral anchor
+            basin_*: Defaults for dynamic basin behavior (spawn/update/prune)
         """
         super().__init__()
         self.dim = dim
@@ -51,6 +65,11 @@ class VectorCollapseEngine(nn.Module):
         self.strength_entail = strength_entail
         self.strength_contra = strength_contra
         self.strength_neutral = strength_neutral
+        self.basin_tension_threshold = basin_tension_threshold
+        self.basin_align_threshold = basin_align_threshold
+        self.basin_anchor_lr = basin_anchor_lr
+        self.basin_prune_min_count = basin_prune_min_count
+        self.basin_prune_merge_cos = basin_prune_merge_cos
         
         # State update network
         # This learns how to evolve the state based on current configuration
@@ -66,6 +85,115 @@ class VectorCollapseEngine(nn.Module):
         self.anchor_neutral = nn.Parameter(torch.randn(dim))
     
     def collapse(self, h0: torch.Tensor) -> Tuple[torch.Tensor, Dict[str, List[torch.Tensor]]]:
+        """
+        Backward-compatible static collapse (three fixed anchors).
+        """
+        return self._collapse_static(h0)
+
+    def collapse_dynamic(
+        self,
+        h0: torch.Tensor,
+        labels: torch.Tensor,
+        basin_field: BasinField,
+        global_step: int = 0,
+        spawn_new: bool = True,
+        prune_every: int = 0,
+        update_anchors: bool = True,
+    ) -> Tuple[torch.Tensor, Dict[str, List[torch.Tensor]]]:
+        """
+        Collapse with dynamic per-label basins.
+        
+        Args:
+            h0: Initial state vector(s) [B, dim] or [dim]
+            labels: Ground-truth labels as integers (0=E,1=C,2=N)
+            basin_field: Shared BasinField instance
+            global_step: Training step for bookkeeping
+            spawn_new: Whether to allow spawning new basins
+            prune_every: If >0, prune/merge every N steps
+            update_anchors: Whether to adapt basin centers after collapse
+        """
+        squeeze = False
+        h = h0
+        if h.dim() == 1:
+            h = h.unsqueeze(0)
+            labels = labels.unsqueeze(0)
+            squeeze = True
+        h = h.clone()
+        labels = labels.to(h.device)
+        basin_field.to(h.device)
+
+        label_to_char = {0: "E", 1: "C", 2: "N"}
+        label_strength = {
+            0: self.strength_entail,
+            1: self.strength_contra,
+            2: self.strength_neutral,
+        }
+
+        anchors = []
+
+        # Route each sample to its label-specific basin (and possibly spawn)
+        for i in range(h.size(0)):
+            y_char = label_to_char.get(int(labels[i].item()))
+            anchor, align_val, div_val, tens_val = route_to_basin(
+                basin_field, h[i], y_char, step=global_step
+            )
+            anchors.append(anchor)
+            if spawn_new:
+                maybe_spawn_basin(
+                    basin_field,
+                    h[i],
+                    y_char,
+                    tens_val,
+                    align_val,
+                    step=global_step,
+                    tension_threshold=self.basin_tension_threshold,
+                    align_threshold=self.basin_align_threshold,
+                )
+
+        anchor_dirs = torch.stack([a.center for a in anchors]).to(h.device)
+        strengths = torch.tensor([label_strength[int(l.item())] for l in labels], device=h.device)
+
+        trace = {
+            "alignment_local": [],
+            "divergence_local": [],
+            "tension_local": [],
+        }
+
+        for step in range(self.num_layers):
+            h_n = F.normalize(h, dim=-1)
+            align = (h_n * anchor_dirs).sum(dim=-1)
+            div = divergence_from_alignment(align)
+            tens = tension(div)
+
+            trace["alignment_local"].append(align.detach())
+            trace["divergence_local"].append(div.detach())
+            trace["tension_local"].append(tens.detach())
+
+            delta = self.update(h)
+            anchor_vec = F.normalize(h - anchor_dirs, dim=-1)
+            h = h + delta - strengths.unsqueeze(-1) * div.unsqueeze(-1) * anchor_vec
+
+            h_norm = h.norm(p=2, dim=-1, keepdim=True)
+            h = torch.where(h_norm > 10.0, h * (10.0 / (h_norm + 1e-8)), h)
+
+        # Update anchors post-collapse
+        if update_anchors:
+            for i, anchor in enumerate(anchors):
+                update_basin_center(anchor, h[i], lr=self.basin_anchor_lr)
+                anchor.last_used_step = global_step
+
+        if prune_every and global_step > 0 and global_step % prune_every == 0:
+            prune_and_merge(
+                basin_field,
+                min_count=self.basin_prune_min_count,
+                merge_cos_threshold=self.basin_prune_merge_cos,
+            )
+
+        if squeeze:
+            h = h.squeeze(0)
+        return h, trace
+
+    def _collapse_static(self, h0: torch.Tensor) -> Tuple[torch.Tensor, Dict[str, List[torch.Tensor]]]:
         """
         Collapse initial state h0 through L steps.
         
@@ -158,4 +286,4 @@ class VectorCollapseEngine(nn.Module):
         Returns:
             Tuple of (h_final, trace)
         """
-        return self.collapse(h0)
+        return self._collapse_static(h0)
