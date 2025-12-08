@@ -1,142 +1,104 @@
-# Nova v3: Livnium Core (Multi-Basin Vector-Based)
+# Nova v3 (Livnium Core v1.0)
 
-**Multi-basin collapse with neutral-aware head.**
+Vector-based Livnium physics applied to SNLI with a clean three-layer stack: core physics, text encoding + task heads, and thin training/testing scripts. This README explains the layout, requirements, and how to train, test, and visualize the model.
 
-## Architecture
+## Project Layout
+- `core/` – Frozen physics layer: `vector_collapse_engine.py` (collapse dynamics), `physics_laws.py` (alignment/divergence/tension), `basin_field.py` (dynamic anchors), `vector_state.py`.
+- `text/` – Encoders: `encoder.py` (embedding mean-pool), `geom_encoder.py` (geometry-only encoder), `sanskrit_encoder.py` (phoneme geometry), `quantum_text_encoder.py` bridge to `../quantum_embed`.
+- `tasks/snli/` – SNLI-specific glue: `encoding_snli.py` builds the initial state (v_h - v_p) and exposes encoder variants; `head_snli.py` classification head with explicit geometry features.
+- `training/train_snli_vector.py` – End-to-end training loop with dataset loading, optional dynamic basins, and multiple encoders.
+- `chat/test_snli_vector.py` – Evaluation script (accuracy + confusion matrix + optional error dump).
+- `chat/visualize_snli_geometry.py` – Projects anchors, basins, and trajectories into the E/N/C plane for inspection.
+- `utils/` – Vocabulary builder and small helpers (`vocab.py`, `power_law_scaling.py`).
+- `data/snli/` – SNLI JSONL files (`snli_1.0_{train,dev,test}.jsonl` expected).
+- `model/` and `runs/` – Saved checkpoints (e.g., `model/snli_quantum_basins2/best_model.pt`).
+- `../quantum_embed/` – Quantum embedding training and the checkpoint used by the quantum encoder (`model_full_physics/quantum_embeddings_final.pt`).
 
-### Layer 0: Core Physics
-- `core/physics_laws.py` - Core laws (divergence = 0.38 - alignment)
-- `core/vector_collapse_engine.py` - Multi-anchor collapse dynamics (E/C/N basins)
-- `core/basin_field.py` - Dynamic per-label micro-basin field (route/spawn/update/prune)
+## Core Concepts
+- **State**: Single vector `h ∈ ℝ^D` (no cells/lattice). `vector_state.py` provides creation and normalization helpers.
+- **Physics law**: `divergence = 0.38 - alignment` with `tension = |divergence|`. Alignment is cosine similarity of OM (premise) and LO (hypothesis) directions.
+- **Collapse engine**: `VectorCollapseEngine` iterates `num_layers` steps, applying learned updates plus anchor forces toward/away entail/contra/neutral. Norm clipping keeps states bounded.
+- **Dynamic basins (optional)**: `BasinField` maintains per-label micro-basins that can be routed to, updated (EMA), spawned on high tension/low alignment, and pruned/merged periodically.
+- **Encoders**: Build OM/LO vectors and initial state `h0 = v_h - v_p` (with small noise for symmetry breaking).
+  - `legacy`: Embedding + mean pool (`text/encoder.py`).
+  - `geom`: Pure geometric token signatures with tiny transformer/attention pooling (`text/geom_encoder.py`), consumes raw text.
+  - `sanskrit`: Phoneme-geometry projection (`text/sanskrit_encoder.py`), uses vocab tokens.
+  - `quantum`: Pretrained Livnium quantum embeddings (`quantum_embed/text_encoder_quantum.py`), dimension fixed by the checkpoint.
+- **Head**: `SNLIHead` concatenates `h_final` with alignment/opposition/radial cues and a learned neutral direction to produce logits for entailment/contradiction/neutral.
 
-**No tokens, no labels, no tasks. Just physics.**
+## Requirements
+- Python 3.9+ recommended.
+- PyTorch, NumPy, tqdm (and matplotlib for visualization).
+  ```bash
+  pip install torch numpy tqdm matplotlib
+  ```
+- For quantum runs, ensure `nova/quantum_embed/` is present and contains `model_full_physics/quantum_embeddings_final.pt`.
 
-### Layer 1: Encoding & Heads
-- `text/encoder.py` - Task-agnostic text encoding
-- `tasks/snli/encoding_snli.py` - SNLI-specific encoding (OM/LO)
-- `tasks/snli/head_snli.py` - SNLI classification head with neutral anchor + MLP
+## Data
+- SNLI JSONL files live in `data/snli/` by default:
+  - `snli_1.0_train.jsonl`
+  - `snli_1.0_dev.jsonl`
+  - `snli_1.0_test.jsonl`
+- The loader drops invalid/ambiguous label pairs and supports `--max-samples` for quick smoke tests.
 
-### Layer 2: Training Scripts
-- `training/train_snli_vector.py` - SNLI training
-- `chat/test_snli_vector.py` - SNLI testing
-
-## Core Principles
-
-1. **Livnium Core = physics engine (no labels, no tasks)**
-2. **Everything else = heads attached on top**
-3. **Same core for SNLI, dialogue, Ramsey, etc.**
-4. **Vector-based (no 3D cells, no hash collisions)**
-
-## Quick Start
-
-### 1. Train SNLI
-
+Quantum encoder run (matches the user-provided setup):
 ```bash
 cd nova/nova_v3
 python3 training/train_snli_vector.py \
   --snli-train data/snli/snli_1.0_train.jsonl \
   --snli-dev data/snli/snli_1.0_dev.jsonl \
+  --encoder-type quantum \
+  --quantum-ckpt ../quantum_embed/model_full_physics/quantum_embeddings_final.pt \
   --dim 256 \
   --batch-size 32 \
   --epochs 5 \
-  --strength-entail 0.1 \
-  --strength-contra 0.1 \
-  --strength-neutral 0.05 \
-  --neutral-weight 1.2 \
-  --label-smoothing 0.05 \
-  --encoder-type geom \
-  --output-dir model/snli_v1
+  --output-dir model/snli_quantum_basins2
 ```
 
-### 2. Test SNLI
+Other useful flags:
+- `--disable-dynamic-basins` to fall back to fixed anchors only.
+- `--basin-*` knobs to control spawn thresholds, EMA rate, pruning cadence/merge cosine, and max basins per label.
+- `--geom-disable-transformer`, `--geom-disable-attn-pool`, `--geom-nhead`, `--geom-num-layers`, `--geom-ff-mult`, `--geom-token-norm-cap` tune the geometric encoder.
+- `--label-smoothing`, `--neutral-weight`, `--neutral-oversample` adjust loss/ sampling for class balance.
+- `--encoder-type sanskrit|legacy` and `--max-len` for token-based encoders.
 
+Checkpoints are written to `--output-dir/best_model.pt` with:
+- `collapse_engine`, `encoder`, and `head` state dicts.
+- Saved `args`, `vocab` (when applicable), and optional `basin_field` state if dynamic basins were enabled.
+
+## Testing SNLI
+Evaluate a trained model (accuracy + confusion matrix, optional error log):
+```bash
+cd /Users/chetanpatil/Desktop/clean-nova-livnium/nova/nova_v3
+python3 chat/test_snli_vector.py \
+  --model-dir model/snli_quantum_basins \
+  --snli-test data/snli/snli_1.0_dev.jsonl \
+  --batch-size 32
+```
+- Add `--max-samples` to limit evaluation.
+- Add `--errors-file errors_calibrated.jsonl` to dump misclassified examples with probabilities.
+
+## Visualizing Geometry
+Project anchors, basins, and collapse trajectories into the E/N/C plane:
 ```bash
 cd nova/nova_v3
-python3 chat/test_snli_vector.py \
-  --model-dir model/snli_v1 \
-  --snli-test data/snli/snli_1.0_test.jsonl 
+python3 chat/visualize_snli_geometry.py \
+  --model-dir model/snli_quantum_basins2 \
+  --snli-file data/snli/snli_1.0_dev.jsonl \
+  --output snli_geometry.png \
+  --max-samples 256 \
+  --trace-samples 24
 ```
+Use `--brain-wires` for the dark neon style or `--trajectories-only` to plot only motion.
 
-## Dynamic Basin Field
+## Tips and Notes
+- GPU is strongly recommended; scripts auto-select CUDA if available.
+- When using the quantum encoder, `--dim` is overridden to match the checkpoint if they differ.
+- Geometric encoder operates on raw text; token-based encoders expect padded token ids (handled inside the dataset).
+- Dynamic basins can grow during training; use `--basin-prune-every` to keep anchor counts in check for long runs.
+- Pretrained examples: `model/snli_quantum_basins/` and `model/snli_quantum_basins2/` contain checkpoints referenced in the commands above.
 
-- Default training uses per-label micro-basins that grow where tension stays high; pass `--disable-dynamic-basins` to fall back to the legacy fixed anchors.
-- Tunable knobs: `--basin-max-per-label`, `--basin-tension-threshold`, `--basin-align-threshold`, `--basin-anchor-lr`, `--basin-prune-every`, `--basin-prune-min-count`, `--basin-merge-cos-threshold`.
-- Training flow: encode → route_to_basin(label) → collapse_dynamic → update basin center → maybe_spawn_basin → optional prune/merge on cadence.
+## Extending
+- New tasks: add an encoding + head under `tasks/<task>/`, then write a training script in `training/`.
+- New watchdogs/analyses: consume traces from `VectorCollapseEngine` (`alignment`, `divergence`, `tension`) rather than modifying the core.
 
-### Encoders
-
-- `geom` (default): deterministic geometric encoder (no embedding tables). Converts tokens → base-27 signatures → geometric features → projected vectors with fixed norm, optional transformer token interaction + attention pooling.
-- `legacy`: mean-pooled learned embeddings for backward compatibility.
-
-Geom knobs (all optional):
-- `--geom-disable-transformer` to turn off the token interaction layer
-- `--geom-disable-attn-pool` to use masked mean instead of attention pooling
-- `--geom-nhead`, `--geom-num-layers`, `--geom-ff-mult`, `--geom-dropout`, `--geom-token-norm-cap` for finer control
-
-## What Changed from nova_v2
-
-- ✅ **Added**: Multi-anchor collapse (entail/contradict/neutral strengths)
-- ✅ **Added**: Neutral-aware head (neutral anchor + small MLP)
-- ✅ **Added**: Training knobs (class weight, smoothing, neutral oversample)
-- ✅ **Kept**: Divergence law (0.38 - alignment), OM/LO encoding, vector state
-
-## What Stays "Livnium"
-
-- Geometry-first reasoning
-- Divergence law (`0.38 - alignment`)
-- OM/LO directions
-- Basins of attraction (now three anchors)
-- Collapse traces
-- Conservation-ish behavior
-
-## Power-Law Scaling Helper
-
-If you sweep a capacity knob (e.g., `--num-layers` or `--dim`) and record two accuracies, you can estimate the power-law exponent and predict how big you need to scale to hit a target accuracy:
-
-```bash
-python3 utils/power_law_scaling.py \
-  --k0 6 --acc0 0.78 \
-  --k1 12 --acc1 0.83 \
-  --target-acc 0.95 \
-  --a-inf 1.0
-```
-
-`k` can be any monotonic capacity measure (layers, width, data). `a_inf` is the ceiling you believe is achievable (defaults to 1.0).
-
-## Future Tasks
-
-To add a new task (e.g., dialogue):
-
-1. Create `tasks/dialogue/encoding_dialogue.py` (builds h0 from context)
-2. Create `tasks/dialogue/head_dialogue.py` (outputs next token distribution)
-3. Create `training/train_dialogue_vector.py` (uses same core)
-
-**No changes to Layer 0. Ever.**
-
-## Structure
-
-```
-nova_v2/
-├── core/              # Layer 0: Physics (FROZEN)
-│   ├── vector_state.py
-│   ├── physics_laws.py
-│   └── vector_collapse_engine.py
-├── text/              # Layer 1: Encoding
-│   └── encoder.py
-├── tasks/             # Layer 1: Task Heads
-│   └── snli/
-│       ├── encoding_snli.py
-│       └── head_snli.py
-├── training/          # Layer 2: Training
-│   └── train_snli_vector.py
-├── chat/              # Layer 2: Testing
-│   └── test_snli_vector.py
-└── utils/             # Utilities
-    └── vocab.py
-```
-
-## Notes
-
-- This is the **last big conceptual rebuild**
-- Next changes should be **tuning**, not **ontology changes**
-- The core is **frozen** - no more redesigns
