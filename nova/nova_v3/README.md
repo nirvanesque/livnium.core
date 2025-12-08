@@ -45,30 +45,22 @@ Quantum encoder run (matches the user-provided setup):
 ```bash
 cd nova/nova_v3
 python3 training/train_snli_vector.py \
-
---snli-train data/snli/snli_1.0_train.jsonl \
---snli-dev data/snli/snli_1.0_dev.jsonl \
---encoder-type quantum \
---quantum-ckpt ../quantum_embed/model_full_physics/quantum_embeddings_final.pt \
---dim 256 \
---batch-size 32 \
---epochs 5 \
---output-dir model/snli_quantum_basins2
+  --snli-train data/snli/snli_1.0_train.jsonl \
+  --snli-dev data/snli/snli_1.0_dev.jsonl \
+  --dim 256 \
+  --batch-size 32 \
+  --epochs 5 \
+  --strength-entail 0.1 \
+  --strength-contra 0.1 \
+  --strength-neutral 0.05 \
+  --neutral-weight 1.2 \
+  --label-smoothing 0.05 \
+  --encoder-type geom \
+  --output-dir model/snli_v1
 ```
 
-Other useful flags:
-- `--disable-dynamic-basins` to fall back to fixed anchors only.
-- `--basin-*` knobs to control spawn thresholds, EMA rate, pruning cadence/merge cosine, and max basins per label.
-- `--geom-disable-transformer`, `--geom-disable-attn-pool`, `--geom-nhead`, `--geom-num-layers`, `--geom-ff-mult`, `--geom-token-norm-cap` tune the geometric encoder.
-- `--label-smoothing`, `--neutral-weight`, `--neutral-oversample` adjust loss/ sampling for class balance.
-- `--encoder-type sanskrit|legacy` and `--max-len` for token-based encoders.
+### 2. Test SNLI
 
-Checkpoints are written to `--output-dir/best_model.pt` with:
-- `collapse_engine`, `encoder`, and `head` state dicts.
-- Saved `args`, `vocab` (when applicable), and optional `basin_field` state if dynamic basins were enabled.
-
-## Testing SNLI
-Evaluate a trained model (accuracy + confusion matrix, optional error log):
 ```bash
 cd /Users/chetanpatil/Desktop/clean-nova-livnium/nova/nova_v3
 python3 chat/test_snli_vector.py \
@@ -76,6 +68,7 @@ python3 chat/test_snli_vector.py \
   --snli-test data/snli/snli_1.0_dev.jsonl \
   --batch-size 32
 ```
+
 - Add `--max-samples` to limit evaluation.
 - Add `--errors-file errors_calibrated.jsonl` to dump misclassified examples with probabilities.
 
