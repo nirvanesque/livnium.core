@@ -34,6 +34,12 @@ Vector-based Livnium physics applied to SNLI with a clean three-layer stack: cor
   ```
 - For quantum runs, ensure `nova/quantum_embed/` is present and contains `model_full_physics/quantum_embeddings_final.pt`.
 
+## Why "quantum" embeddings?
+- The quantum encoder is just a pretrained embedding table + tokenizer produced by `nova/quantum_embed/train_quantum_embeddings.py` using a Livnium energy objective (alignment/divergence/tension) on WikiText-103.
+- Training can optionally run collapse physics (static anchors or dynamic basins) during embedding learning, so geometry in the table is already shaped by Livnium forces before SNLI fine-tuning.
+- At SNLI time we only load that checkpoint (vocab + embeddings) and mean-pool sentences; the nova_v3 collapse engine and SNLI head still do the downstream dynamics/classification.
+- Use it when you want better geometry out of the box or to match the reference configs; otherwise `geom` or `legacy` encoders skip the pretrained Livnium embedding prior.
+
 ## Data
 - SNLI JSONL files live in `data/snli/` by default:
   - `snli_1.0_train.jsonl`
@@ -103,4 +109,3 @@ Use `--brain-wires` for the dark neon style or `--trajectories-only` to plot onl
 ## Extending
 - New tasks: add an encoding + head under `tasks/<task>/`, then write a training script in `training/`.
 - New watchdogs/analyses: consume traces from `VectorCollapseEngine` (`alignment`, `divergence`, `tension`) rather than modifying the core.
-
