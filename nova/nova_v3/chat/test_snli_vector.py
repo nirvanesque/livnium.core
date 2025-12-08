@@ -20,8 +20,9 @@ sys.path.insert(0, str(nova_v3_root))
 sys.path.insert(0, str(repo_root))
 
 from core import VectorCollapseEngine, BasinField
-from tasks.snli import QuantumSNLIEncoder, SNLIHead
+from tasks.snli import SNLIEncoder, GeometricSNLIEncoder, SanskritSNLIEncoder, QuantumSNLIEncoder, SNLIHead
 from quantum_embed.text_encoder_quantum import QuantumTextEncoder
+from utils.vocab import Vocabulary
 from training.train_snli_vector import SNLIDataset, load_snli_data
 
 
@@ -55,6 +56,7 @@ def main():
         weights_only=False
     )
     
+    vocab = checkpoint['vocab']
     model_args = checkpoint['args']
     use_dynamic_basins = checkpoint.get("use_dynamic_basins", False)
     basin_state = checkpoint.get("basin_field", None)
@@ -65,21 +67,7 @@ def main():
         basin_field.to(device)
     else:
         use_dynamic_basins = False
-
-    quantum_ckpt = getattr(model_args, "quantum_ckpt", None)
-    if not quantum_ckpt:
-        raise ValueError("Checkpoint missing quantum_ckpt for quantum encoder")
-
-    quantum_tokenizer = QuantumTextEncoder(quantum_ckpt)
-
-    def quantum_encode(text: str, max_len: int = args.max_len):
-        tokens = quantum_tokenizer.tokenize(text)
-        ids = [quantum_tokenizer.word2idx.get(t, quantum_tokenizer.unk_idx) for t in tokens]
-        ids = ids[:max_len]
-        if len(ids) < max_len:
-            ids.extend([quantum_tokenizer.pad_idx] * (max_len - len(ids)))
-        return ids
-
+    
     # Create models
     collapse_engine = VectorCollapseEngine(
         dim=model_args.dim, 
@@ -93,10 +81,65 @@ def main():
         basin_prune_min_count=getattr(model_args, "basin_prune_min_count", 10),
         basin_prune_merge_cos=getattr(model_args, "basin_merge_cos_threshold", 0.97),
     ).to(device)
+    encoder_type = getattr(model_args, "encoder_type", "legacy")
+    vocab_id_to_token = vocab.id_to_token_list() if hasattr(vocab, "id_to_token_list") else None
 
-    encoder = QuantumSNLIEncoder(
-        ckpt_path=quantum_ckpt,
-    ).to(device)
+    # Build encode_fn for quantum checkpoints (vocab is None in that setting)
+    encode_fn = None
+    quantum_ckpt = getattr(model_args, "quantum_ckpt", None)
+    quantum_tokenizer = None
+    if encoder_type == "quantum":
+        if not quantum_ckpt:
+            raise ValueError("encoder_type=quantum requires quantum_ckpt in the saved args")
+        quantum_tokenizer = QuantumTextEncoder(quantum_ckpt)
+
+        def quantum_encode(text: str, max_len: int = args.max_len):
+            tokens = quantum_tokenizer.tokenize(text)
+            ids = [quantum_tokenizer.word2idx.get(t, quantum_tokenizer.unk_idx) for t in tokens]
+            ids = ids[:max_len]
+            if len(ids) < max_len:
+                ids.extend([quantum_tokenizer.pad_idx] * (max_len - len(ids)))
+            return ids
+
+        encode_fn = quantum_encode
+
+    if encoder_type == "geom":
+        encoder = GeometricSNLIEncoder(
+            dim=model_args.dim,
+            norm_target=None,
+            use_transformer=not getattr(model_args, "geom_disable_transformer", False),
+            nhead=getattr(model_args, "geom_nhead", 4),
+            num_layers=getattr(model_args, "geom_num_layers", 1),
+            ff_mult=getattr(model_args, "geom_ff_mult", 2),
+            dropout=getattr(model_args, "geom_dropout", 0.1),
+            use_attention_pooling=not getattr(model_args, "geom_disable_attn_pool", False),
+            token_norm_cap=(
+                getattr(model_args, "geom_token_norm_cap", 3.0)
+                if getattr(model_args, "geom_token_norm_cap", 3.0) > 0
+                else None
+            ),
+        ).to(device)
+    elif encoder_type == "sanskrit":
+        if vocab is None:
+            raise ValueError("Sanskrit encoder requires a saved vocabulary")
+        encoder = SanskritSNLIEncoder(
+            vocab_size=len(vocab),
+            dim=model_args.dim,
+            pad_idx=vocab.pad_idx,
+            id_to_token=vocab_id_to_token,
+        ).to(device)
+    elif encoder_type == "quantum":
+        encoder = QuantumSNLIEncoder(
+            ckpt_path=quantum_ckpt,
+        ).to(device)
+    else:
+        if vocab is None:
+            raise ValueError("Legacy encoder requires a saved vocabulary")
+        encoder = SNLIEncoder(
+            vocab_size=len(vocab), 
+            dim=model_args.dim,
+            pad_idx=vocab.pad_idx,
+        ).to(device)
     head = SNLIHead(dim=model_args.dim).to(device)
     
     # Load weights
@@ -114,7 +157,7 @@ def main():
     print(f"Loaded {len(test_samples)} test samples")
     
     # Create dataset
-    test_dataset = SNLIDataset(test_samples, encode_fn=quantum_encode, max_len=args.max_len)
+    test_dataset = SNLIDataset(test_samples, vocab, max_len=args.max_len, encode_fn=encode_fn)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
     
     # Evaluate
@@ -136,7 +179,14 @@ def main():
             labels = batch['label'].to(device)
             gold_labels = batch['gold_label']
             
-            h0, v_p, v_h = encoder.build_initial_state(prem_ids, hyp_ids)
+            if isinstance(encoder, GeometricSNLIEncoder):
+                h0, v_p, v_h = encoder.build_initial_state(
+                    batch['premise'],
+                    batch['hypothesis'],
+                    device=device
+                )
+            else:
+                h0, v_p, v_h = encoder.build_initial_state(prem_ids, hyp_ids)
             
             if use_dynamic_basins and basin_field is not None:
                 h_final, trace = collapse_engine.collapse_dynamic(

@@ -29,31 +29,33 @@
 
 ## Quick Start
 
-### Train + Dev (Quantum encoder only)
+### 1. Train SNLI
 
 ```bash
+cd nova/nova_v3
 python3 training/train_snli_vector.py \
   --snli-train data/snli/snli_1.0_train.jsonl \
   --snli-dev data/snli/snli_1.0_dev.jsonl \
-  --quantum-ckpt ../quantum_embed/model_full_physics/quantum_embeddings_final.pt \
   --dim 256 \
   --batch-size 32 \
   --epochs 5 \
-  --output-dir model/snli_quantum_basins
+  --strength-entail 0.1 \
+  --strength-contra 0.1 \
+  --strength-neutral 0.05 \
+  --neutral-weight 1.2 \
+  --label-smoothing 0.05 \
+  --encoder-type geom \
+  --output-dir model/snli_v1
 ```
 
-### Test
+### 2. Test SNLI
 
 ```bash
+cd nova/nova_v3
 python3 chat/test_snli_vector.py \
-  --model-dir model/snli_quantum_basins \
-  --snli-test data/snli/snli_1.0_test.jsonl \
-  --batch-size 32
+  --model-dir model/snli_v1 \
+  --snli-test data/snli/snli_1.0_test.jsonl 
 ```
-
-### Recent Result Snapshot
-
-- Quantum encoder + dynamic basins (`model/snli_quantum_basins`): **Dev 0.9576**, **Test 0.9619** on SNLI (batch 32, dim 256, 5 epochs).
 
 ## Dynamic Basin Field
 
@@ -63,7 +65,13 @@ python3 chat/test_snli_vector.py \
 
 ### Encoders
 
-- Quantum Livnium encoder (pretrained embeddings from `quantum_embed`). Geometric/legacy flows have been removed to keep the stack single-path.
+- `geom` (default): deterministic geometric encoder (no embedding tables). Converts tokens → base-27 signatures → geometric features → projected vectors with fixed norm, optional transformer token interaction + attention pooling.
+- `legacy`: mean-pooled learned embeddings for backward compatibility.
+
+Geom knobs (all optional):
+- `--geom-disable-transformer` to turn off the token interaction layer
+- `--geom-disable-attn-pool` to use masked mean instead of attention pooling
+- `--geom-nhead`, `--geom-num-layers`, `--geom-ff-mult`, `--geom-dropout`, `--geom-token-norm-cap` for finer control
 
 ## What Changed from nova_v2
 
@@ -108,26 +116,27 @@ To add a new task (e.g., dialogue):
 ## Structure
 
 ```
-nova_v3/
-├── core/                  # Layer 0: Physics (FROZEN)
+nova_v2/
+├── core/              # Layer 0: Physics (FROZEN)
+│   ├── vector_state.py
 │   ├── physics_laws.py
-│   ├── vector_collapse_engine.py
-│   └── basin_field.py
-├── tasks/
+│   └── vector_collapse_engine.py
+├── text/              # Layer 1: Encoding
+│   └── encoder.py
+├── tasks/             # Layer 1: Task Heads
 │   └── snli/
-│       ├── encoding_snli.py   # QuantumSNLIEncoder
+│       ├── encoding_snli.py
 │       └── head_snli.py
-├── training/
-│   └── train_snli_vector.py   # quantum-only training
-├── chat/
-│   └── test_snli_vector.py    # quantum-only eval
-└── quantum_embed/             # pretrained embeddings + tokenizer
-    ├── text_encoder_quantum.py
-    └── quantum_embeddings_final.pt
+├── training/          # Layer 2: Training
+│   └── train_snli_vector.py
+├── chat/              # Layer 2: Testing
+│   └── test_snli_vector.py
+└── utils/             # Utilities
+    └── vocab.py
 ```
 
 ## Notes
 
-- Run scripts from repo root or keep `nova/` on `PYTHONPATH` so `quantum_embed` imports resolve.
-- This is the **last big conceptual rebuild**; next changes should be **tuning**, not **ontology changes**.
-- The core is **frozen** - no more redesigns.
+- This is the **last big conceptual rebuild**
+- Next changes should be **tuning**, not **ontology changes**
+- The core is **frozen** - no more redesigns
