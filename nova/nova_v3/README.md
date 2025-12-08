@@ -71,7 +71,6 @@ Quantum encoder run (matches the user-provided setup):
 ```bash
 cd nova/nova_v3
 python3 training/train_snli_vector.py \
-
 --snli-train data/snli/snli_1.0_train.jsonl \
 --snli-dev data/snli/snli_1.0_dev.jsonl \
 --encoder-type quantum \

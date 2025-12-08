@@ -67,6 +67,9 @@ def main():
         basin_field.to(device)
     else:
         use_dynamic_basins = False
+
+    if use_dynamic_basins:
+        print("Note: Dynamic basins detected, but evaluation will use static collapse (no label routing) to avoid label leakage.")
     
     # Create models
     collapse_engine = VectorCollapseEngine(
@@ -188,18 +191,8 @@ def main():
             else:
                 h0, v_p, v_h = encoder.build_initial_state(prem_ids, hyp_ids)
             
-            if use_dynamic_basins and basin_field is not None:
-                h_final, trace = collapse_engine.collapse_dynamic(
-                    h0,
-                    labels,
-                    basin_field,
-                    global_step=0,
-                    spawn_new=False,
-                    prune_every=0,
-                    update_anchors=False,
-                )
-            else:
-                h_final, trace = collapse_engine.collapse(h0)
+            # Do NOT route by ground-truth labels at eval time; use static collapse.
+            h_final, trace = collapse_engine.collapse(h0)
             
             # Classify with directional signals
             logits = head(h_final, v_p, v_h)

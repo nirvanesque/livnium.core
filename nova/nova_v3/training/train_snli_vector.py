@@ -230,18 +230,8 @@ def evaluate(
                 hyp_ids = batch['hyp_ids'].to(device)
                 h0, v_p, v_h = encoder.build_initial_state(prem_ids, hyp_ids)
             
-            if use_dynamic_basins and basin_field is not None:
-                h_final, trace = model.collapse_dynamic(
-                    h0,
-                    labels,
-                    basin_field,
-                    global_step=0,
-                    spawn_new=False,
-                    prune_every=0,
-                    update_anchors=False,
-                )
-            else:
-                h_final, trace = model.collapse(h0)
+            # Eval must not condition collapse on ground-truth labels; run static collapse.
+            h_final, trace = model.collapse(h0)
             
             # Classify with directional signals
             logits = head(h_final, v_p, v_h)
@@ -332,12 +322,48 @@ def main():
                        help='Dropout for geometric encoder projection/transformer')
     parser.add_argument('--geom-token-norm-cap', type=float, default=3.0,
                        help='Per-token norm cap after projection (set <=0 to disable)')
-    
+    parser.add_argument('--resume', type=str, default=None,
+                       help='Resume from a checkpoint (e.g., model/.../best_model.pt)')
+
     args = parser.parse_args()
     
     # Device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
+
+    # Optional resume checkpoint
+    resume_ckpt = None
+    resume_args = None
+    resume_use_dynamic = None
+    resume_global_step = 0
+    if args.resume:
+        resume_path = Path(args.resume)
+        if not resume_path.exists():
+            raise FileNotFoundError(f"Resume checkpoint not found: {resume_path}")
+        print(f"Resuming weights from {resume_path}")
+        resume_ckpt = torch.load(resume_path, map_location=device, weights_only=False)
+        resume_args = resume_ckpt.get('args')
+        if resume_args is None:
+            raise ValueError("Resume checkpoint missing args")
+        resume_use_dynamic = resume_ckpt.get('use_dynamic_basins', None)
+        resume_global_step = resume_ckpt.get('global_step', 0)
+
+        # Align critical hyperparameters to checkpoint to ensure state_dict compatibility
+        args.encoder_type = getattr(resume_args, 'encoder_type', args.encoder_type)
+        args.dim = getattr(resume_args, 'dim', args.dim)
+        args.num_layers = getattr(resume_args, 'num_layers', args.num_layers)
+        args.quantum_ckpt = getattr(resume_args, 'quantum_ckpt', args.quantum_ckpt)
+        args.max_len = getattr(resume_args, 'max_len', args.max_len)
+        args.geom_disable_transformer = getattr(resume_args, 'geom_disable_transformer', args.geom_disable_transformer)
+        args.geom_disable_attn_pool = getattr(resume_args, 'geom_disable_attn_pool', args.geom_disable_attn_pool)
+        args.geom_nhead = getattr(resume_args, 'geom_nhead', args.geom_nhead)
+        args.geom_num_layers = getattr(resume_args, 'geom_num_layers', args.geom_num_layers)
+        args.geom_ff_mult = getattr(resume_args, 'geom_ff_mult', args.geom_ff_mult)
+        args.geom_dropout = getattr(resume_args, 'geom_dropout', args.geom_dropout)
+        args.geom_token_norm_cap = getattr(resume_args, 'geom_token_norm_cap', args.geom_token_norm_cap)
+        # Respect saved dynamic basins usage
+        if resume_use_dynamic is not None:
+            args.disable_dynamic_basins = not resume_use_dynamic
     
     # Load data
     print("Loading SNLI data...")
@@ -367,11 +393,16 @@ def main():
 
         quantum_encode_fn = quantum_encode
     else:
-        # Build vocabulary from SNLI
-        print("Building vocabulary...")
-        vocab = build_vocab_from_snli(train_samples, min_count=2)
-        print(f"Vocabulary size: {len(vocab)}")
-        vocab_id_to_token = vocab.id_to_token_list()
+        # Reuse saved vocab if resuming; otherwise build from SNLI
+        if resume_ckpt and resume_ckpt.get('vocab') is not None:
+            vocab = resume_ckpt['vocab']
+            vocab_id_to_token = vocab.id_to_token_list() if hasattr(vocab, "id_to_token_list") else None
+            print(f"Loaded vocab from checkpoint (size={len(vocab)})")
+        else:
+            print("Building vocabulary...")
+            vocab = build_vocab_from_snli(train_samples, min_count=2)
+            print(f"Vocabulary size: {len(vocab)}")
+            vocab_id_to_token = vocab.id_to_token_list()
     
     # Create datasets
     train_dataset = SNLIDataset(train_samples, vocab, max_len=args.max_len, encode_fn=quantum_encode_fn)
@@ -400,7 +431,7 @@ def main():
     
     # Create models
     print("Creating models...")
-    use_dynamic_basins = not args.disable_dynamic_basins
+    use_dynamic_basins = resume_use_dynamic if resume_use_dynamic is not None else (not args.disable_dynamic_basins)
     basin_field = BasinField(max_basins_per_label=args.basin_max_per_label) if use_dynamic_basins else None
     collapse_engine = VectorCollapseEngine(
         dim=args.dim,
@@ -444,6 +475,14 @@ def main():
             pad_idx=vocab.pad_idx,
         ).to(device)
     head = SNLIHead(dim=args.dim).to(device)
+
+    # Load weights if resuming
+    if resume_ckpt is not None:
+        collapse_engine.load_state_dict(resume_ckpt['collapse_engine'])
+        encoder.load_state_dict(resume_ckpt['encoder'])
+        head.load_state_dict(resume_ckpt['head'])
+        if use_dynamic_basins and basin_field is not None and resume_ckpt.get('basin_field') is not None:
+            basin_field.load_state_dict(resume_ckpt['basin_field'])
     
     # Optimizer
     optimizer = optim.Adam(
@@ -452,6 +491,12 @@ def main():
         list(head.parameters()),
         lr=args.lr
     )
+    if resume_ckpt is not None and 'optimizer' in resume_ckpt:
+        try:
+            optimizer.load_state_dict(resume_ckpt['optimizer'])
+            print("Loaded optimizer state from checkpoint")
+        except Exception as e:
+            print(f"Warning: could not load optimizer state ({e}); continuing with fresh optimizer")
     
     # Loss with optional class weighting and label smoothing
     class_weights = torch.tensor([1.0, 1.0, args.neutral_weight], device=device, dtype=torch.float)
@@ -466,8 +511,8 @@ def main():
     print("Training")
     print("=" * 70)
     
-    best_acc = 0.0
-    global_step = 0
+    best_acc = resume_ckpt.get('best_acc', 0.0) if resume_ckpt is not None else 0.0
+    global_step = resume_global_step
     
     for epoch in range(args.epochs):
         print(f"\nEpoch {epoch + 1}/{args.epochs}")
@@ -521,6 +566,9 @@ def main():
                     'args': args,
                     'basin_field': basin_field.state_dict() if basin_field is not None else None,
                     'use_dynamic_basins': use_dynamic_basins,
+                    'optimizer': optimizer.state_dict(),
+                    'best_acc': best_acc,
+                    'global_step': global_step,
                 }, output_dir / 'best_model.pt')
                 print(f"✓ Saved best model (acc: {best_acc:.4f})")
     
