@@ -45,14 +45,15 @@ Quantum encoder run (matches the user-provided setup):
 ```bash
 cd nova/nova_v3
 python3 training/train_snli_vector.py \
-  --snli-train data/snli/snli_1.0_train.jsonl \
-  --snli-dev data/snli/snli_1.0_dev.jsonl \
-  --encoder-type quantum \
-  --quantum-ckpt ../quantum_embed/model_full_physics/quantum_embeddings_final.pt \
-  --dim 256 \
-  --batch-size 32 \
-  --epochs 5 \
-  --output-dir model/snli_quantum_basins2
+
+--snli-train data/snli/snli_1.0_train.jsonl \
+--snli-dev data/snli/snli_1.0_dev.jsonl \
+--encoder-type quantum \
+--quantum-ckpt ../quantum_embed/model_full_physics/quantum_embeddings_final.pt \
+--dim 256 \
+--batch-size 32 \
+--epochs 5 \
+--output-dir model/snli_quantum_basins2
 ```
 
 Other useful flags:
