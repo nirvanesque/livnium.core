@@ -1,228 +1,75 @@
-# Nova v2 Architecture: Livnium Core v1.0
+# Nova v3 Architecture (Livnium Core v1.0)
 
-## Overview
+Three clean layers, frozen core physics, and swappable encoders. The default SNLI stack uses a pretrained **quantum** embedding table from `nova/quantum_embed` as its main encoder option.
 
-**This is the frozen architecture. No more redesigns.**
+## Layer 0 · Core Physics (frozen)
+- **Location**: `core/`
+- **Files**: `vector_state.py`, `physics_laws.py`, `vector_collapse_engine.py`, `basin_field.py`
+- **Laws**: alignment = cos(OM, LO); divergence = `0.38 - alignment`; tension = `|divergence|`.
+- **Dynamics**: `VectorCollapseEngine` iterates L steps with learned state update + anchor forces (entail/contra/neutral), soft norm cap, and trace logging.
+- **Dynamic basins**: optional `BasinField` maintains per-label micro-anchors (route, spawn on high tension/low align, EMA update, prune/merge).
+- **Knows nothing about text or labels** beyond numeric labels passed into dynamic mode.
 
-The system is organized into 3 clean layers:
+## Layer 1 · Encoders & Heads
+- **Encoders (text/)**
+  - `text/encoder.py` — legacy embedding + mean pool.
+  - `text/geom_encoder.py` — geometric signatures over raw text with optional transformer/attention pooling.
+  - `text/sanskrit_encoder.py` — phoneme-geometry projection.
+  - `quantum_embed/text_encoder_quantum.py` — **main pretrained encoder**; loads `quantum_embeddings_final.pt` from `nova/quantum_embed/model_full_physics/`, providing tokenizer + embedding table shaped by Livnium energy (optionally collapsed during pretraining).
+- **SNLI glue (tasks/snli/)**
+  - `encoding_snli.py` — builds OM/LO vectors, initial state `h0 = v_h - v_p + noise`, exposes encoder variants (legacy/geom/sanskrit/quantum).
+  - `head_snli.py` — classification head using `h_final` plus alignment/opposition/radial and neutral-direction features → logits (E/N/C).
 
-1. **Layer 0: Core Physics** - Pure physics engine (no tokens, no labels)
-2. **Layer 1: Encoding & Heads** - Task-specific encoding and classification
-3. **Layer 2: Training Scripts** - Data loading and training loops
+## Layer 2 · Scripts (train/eval/visualize)
+- `training/train_snli_vector.py` — end-to-end SNLI training; chooses encoder via `--encoder-type {legacy,geom,sanskrit,quantum}`; wires dynamic basins, class weights, sampling, and saves checkpoints.
+- `chat/test_snli_vector.py` — evaluation (accuracy + confusion matrix, optional error dump).
+- `chat/visualize_snli_geometry.py` — 2D projection of anchors/basins/trajectories.
 
-## Layer 0: Core Physics (FROZEN)
+## Data & Artifacts
+- SNLI JSONL under `data/snli/` (train/dev/test).
+- Checkpoints under `model/<run>/best_model.pt` containing collapse engine, encoder, head, args, vocab (if applicable), and basin field when used.
+- Quantum encoder checkpoint lives in `nova/quantum_embed/model_full_physics/quantum_embeddings_final.pt` (tokenizer + embeddings; may also carry its own collapse/basin state from pretraining).
 
-**Location**: `nova_v2/core/`
+## Training Flow (SNLI)
+1) Load SNLI, drop invalid/ambiguous label pairs; build vocab or use quantum tokenizer.
+2) Encode premise/hypothesis → `v_p` (OM), `v_h` (LO); build `h0 = v_h - v_p + ε`.
+3) Collapse: `VectorCollapseEngine.collapse(h0)` (static anchors) or `.collapse_dynamic(h0, labels, basin_field)` (per-label basins).
+4) Head: `SNLIHead(h_final, v_p, v_h)` → logits.
+5) Loss: `CrossEntropyLoss` (optional label smoothing/class weights); optimize encoder + collapse engine + head with Adam.
 
-**Files**:
-- `vector_state.py` - State representation (single vector h ∈ ℝ^D)
-- `physics_laws.py` - Core laws (alignment, divergence, tension)
-- `vector_collapse_engine.py` - Collapse dynamics
-- `basin_field.py` - Dynamic micro-basin field (per-label anchors, spawn/update/prune)
-
-**What it does**:
-- Defines vector state `h`
-- Implements OM/LO construction rules
-- Computes alignment, divergence (0.38 - alignment), tension
-- Evolves state through L collapse steps
-- Logs trace (alignment_t, divergence_t, tension_t)
-
-**What it does NOT know**:
-- "entailment", "neutral", "contradiction"
-- "tokens", "English"
-- Any task-specific concepts
-
-**Key Law**: `divergence = 0.38 - alignment`
-
-## Layer 1: Encoding & Heads
-
-### Text Encoding
-
-**Location**: `nova_v2/text/`
-
-**Files**:
-- `encoder.py` - Task-agnostic text encoder
-
-**What it does**:
-- Converts tokens → embeddings → sentence vector
-- Simple average pooling
-
-### Task Heads
-
-**Location**: `nova_v2/tasks/`
-
-**SNLI Head** (`tasks/snli/`):
-- `encoding_snli.py` - Builds initial state h0 from premise/hypothesis
-- `head_snli.py` - Classifies h_final → logits (E, N, C)
-
-**Future Heads**:
-- `tasks/dialogue/` - Dialogue encoding and generation head
-- `tasks/ramsey/` - Ramsey-specific head
-
-## Layer 2: Training Scripts
-
-**Location**: `nova_v2/training/` and `nova_v2/chat/`
-
-**Files**:
-- `training/train_snli_vector.py` - SNLI training
-- `chat/test_snli_vector.py` - SNLI testing
-
-**What they do**:
-- Load data
-- Encode text → initial state h0
-- Run collapse → h_final, trace
-- Apply head → logits
-- Compute loss & optimize
-- (Future: run watchdogs on trace)
-
-## Data Flow
-
-### Training Flow
-
+## Physics Snapshot
 ```
-SNLI Data
-  ↓
-Vocabulary Builder
-  ↓
-Tokenize (premise, hypothesis)
-  ↓
-SNLIEncoder.build_initial_state()
-  → h0 (initial state)
-  → v_p (OM vector)
-  → v_h (LO vector)
-  ↓
-VectorCollapseEngine.collapse(h0)
-  → h_final (collapsed state)
-  → trace (alignment, divergence, tension)
-  ↓
-SNLIHead(h_final)
-  → logits (E, N, C)
-  ↓
-CrossEntropyLoss(logits, gold_label)
-  → loss
-  ↓
-Backward & Optimize
-```
-Dynamic basin mode (default) adds:
-- route_to_basin(h0, label) → anchor center
-- collapse_dynamic(h0, labels, basin_field) with per-label strengths
-- update_basin_center + maybe_spawn_basin + periodic prune/merge
-
-### Physics Computation
-
-```
-OM (v_p) and LO (v_h) vectors
-  ↓
-alignment = cosine_similarity(OM, LO)
-  ↓
+alignment = cos(om, lo)
 divergence = 0.38 - alignment
-  ↓
 tension = |divergence|
+h_{t+1} = h_t + δ(h_t) - Σ_k strength_k * divergence_k * dir(h_t - anchor_k)
+‖h‖ is softly capped (≈10)
 ```
-
-## Key Principles
-
-1. **Livnium Core = physics engine (no labels, no tasks)**
-2. **Everything else = heads attached on top**
-3. **Same core for SNLI, dialogue, Ramsey, etc.**
-4. **Vector-based (no 3D cells, no hash collisions)**
-
-## What Changed from nova/
-
-### Removed
-- ❌ 3D lattice with cells
-- ❌ hash(token) → (x, y, z)
-- ❌ Token collisions (92%+)
-- ❌ Direct SW per cell as signature
-
-### Added
-- ✅ Vector-based state `h`
-- ✅ Tokens → embeddings → vectors
-- ✅ Clean 3-layer architecture
-- ✅ Frozen core (no more redesigns)
-
-### Kept
-- ✅ Divergence law (0.38 - alignment)
-- ✅ OM/LO separation
-- ✅ Collapse dynamics
-- ✅ Trace logging
-- ✅ Conservation-ish behavior
 
 ## Adding a New Task
+1) Add an encoding to `tasks/<task>/encoding_<task>.py` that returns `h0, v_a, v_b` (or similar OM/LO vectors).
+2) Add a head to `tasks/<task>/head_<task>.py` that maps collapsed state (+ optional geometry features) to logits/outputs.
+3) Add a training script under `training/` that loads data, instantiates the encoder/head, and calls the shared collapse engine.
+4) Keep Layer 0 untouched; reuse physics and basin machinery.
 
-To add a new task (e.g., dialogue):
-
-1. **Create encoding** (`tasks/dialogue/encoding_dialogue.py`):
-   ```python
-   def build_initial_state(self, context, query):
-       # Build h0 from context and query
-       return h0, v_context, v_query
-   ```
-
-2. **Create head** (`tasks/dialogue/head_dialogue.py`):
-   ```python
-   def forward(self, h_final):
-       # Output next token distribution
-       return logits
-   ```
-
-3. **Create training script** (`training/train_dialogue_vector.py`):
-   ```python
-   # Use same VectorCollapseEngine
-   # Use same physics laws
-   # Just different encoding and head
-   ```
-
-**No changes to Layer 0. Ever.**
-
-## File Structure
-
+## File Structure (v3)
 ```
-nova_v2/
-├── core/                    # Layer 0: Physics (FROZEN)
-│   ├── __init__.py
-│   ├── vector_state.py
-│   ├── physics_laws.py
-│   └── vector_collapse_engine.py
-├── text/                    # Layer 1: Encoding
-│   ├── __init__.py
-│   └── encoder.py
-├── tasks/                   # Layer 1: Task Heads
-│   ├── __init__.py
-│   └── snli/
-│       ├── __init__.py
-│       ├── encoding_snli.py
-│       └── head_snli.py
-├── training/               # Layer 2: Training
-│   ├── __init__.py
-│   └── train_snli_vector.py
-├── chat/                   # Layer 2: Testing
-│   ├── __init__.py
-│   └── test_snli_vector.py
-├── utils/                  # Utilities
-│   ├── __init__.py
-│   └── vocab.py
-├── data/                  # Data
-│   └── snli/
-│       ├── snli_1.0_train.jsonl
-│       ├── snli_1.0_dev.jsonl
-│       └── snli_1.0_test.jsonl
+nova_v3/
+├── core/                  # Layer 0: physics + basins
+├── text/                  # Layer 1: encoders (legacy/geom/sanskrit)
+├── tasks/snli/            # Layer 1: SNLI encoding + head
+├── training/              # Layer 2: training scripts
+├── chat/                  # Layer 2: eval/visualize
+├── utils/                 # helpers (vocab, scaling)
+├── data/snli/             # datasets
+├── model/                 # checkpoints
 ├── README.md
 └── ARCHITECTURE.md
 ```
+Primary pretrained encoder lives at `nova/quantum_embed/` and plugs in via `--encoder-type quantum`.
 
-## Next Steps
-
-1. ✅ **Core is frozen** - no more redesigns
-2. ✅ **Architecture is clean** - 3 layers, clear separation
-3. 🔄 **Tune hyperparameters** - dim, num_layers, lr, etc.
-4. 🔄 **Add watchdogs** - read from trace, not cells
-5. 🔄 **Add dialogue head** - same core, different head
-
-## Notes
-
-- This is the **last big conceptual rebuild**
-- Next changes should be **tuning**, not **ontology changes**
-- The core is **frozen** - no more redesigns
-- Watchdogs can read from `trace` (alignment, divergence, tension)
-- Future tasks just need new encoding + head, same core
+## Principles
+- Core physics is frozen; extend via encoders/heads/scripts.
+- Encoders are interchangeable; quantum is the main pretrained option, geom/legacy/sanskrit are task-side alternatives.
+- Dynamic basins add topology without changing laws; prune/merge keeps them bounded.
+- Watchdogs/visualizations read traces; they don’t mutate the core.
