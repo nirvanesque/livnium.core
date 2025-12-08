@@ -103,6 +103,14 @@ python3 chat/test_snli_vector.py \
   --batch-size 32
 ```
 
+```bash
+cd /Users/chetanpatil/Desktop/clean-nova-livnium/nova/nova_v3
+python3 chat/test_snli_vector.py \
+  --model-dir model/snli_quantum_basins \
+  --snli-test data/snli/snli_1.0_test.jsonl \
+  --batch-size 32
+```
+
 - Add `--max-samples` to limit evaluation.
 - Add `--errors-file errors_calibrated.jsonl` to dump misclassified examples with probabilities.
 
