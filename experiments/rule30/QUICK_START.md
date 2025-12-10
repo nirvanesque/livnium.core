@@ -1,51 +1,65 @@
 # Quick Start Guide
 
-## Running Phase 2 Scripts
+End-to-end run of the Shadow Rule 30 pipeline from chaos data to proof.
 
-All Phase 2 scripts are now in `PHASE2/code/`. You need to run them from the correct directory.
+## Prerequisites
+- Python 3.10+
+- `pip install numpy scipy scikit-learn matplotlib`
+- Commands below assume repo root: `/Users/chetanpatil/Desktop/clean-nova-livnium`
 
-### Option 1: Change to the code directory
-
+## 1) Generate Geometry (Phase 2)
 ```bash
 cd experiments/rule30/PHASE2/code
-python3 verify_phase2_physics.py --verbose
-python3 four_bit_chaos_tracker.py --steps 5000 --verbose
+python3 verify_phase2_integrity.py --verbose             # algebraic checks
+python3 verify_phase2_physics.py --verbose               # physical checks (known caveats)
+python3 four_bit_chaos_tracker.py --steps 5000 --verbose # writes chaos14 trajectories
 ```
+Outputs land in `../results/chaos14/` (mirrored in `experiments/rule30/results/chaos14/`).
 
-### Option 2: Run from project root
-
+## 2) Learn Dynamics (Phase 3)
 ```bash
-# From clean-nova-livnium/
-python3 experiments/rule30/PHASE2/code/verify_phase2_physics.py --verbose
-python3 experiments/rule30/PHASE2/code/four_bit_chaos_tracker.py --steps 5000 --verbose
+cd ../../PHASE3
+python3 code/extract_pca_trajectories.py --n-components 8 --output-dir results --verbose
+python3 code/fit_pc1_dynamics.py        --data-dir results --output-dir results --use-pc2-pc3 --verbose
+python3 code/fit_full_dynamics.py       --data-dir results --output-dir results --n-components 8 --verbose
+python3 code/shadow_rule30.py           --data-dir results --output-dir results --num-steps 5000 --verbose
+python3 code/evaluate_dynamics.py       --data-dir results --output-dir results --verbose
+python3 code/visualize_dynamics.py      --data-dir results --output-dir results --verbose
+python3 code/generate_report.py         --data-dir results --output docs/PHASE3_RESULTS.md --verbose
 ```
 
-### Option 3: Use absolute paths
-
+## 3) Decode + Keep Shadow Alive (Phase 4)
 ```bash
-python3 /Users/chetanpatil/Desktop/clean-nova-livnium/experiments/rule30/PHASE2/code/verify_phase2_physics.py
+cd ../PHASE4
+bash run_all.sh                        # trains decoder + runs shadow with energy injection
+python3 code/validate_shadow.py --results-dir results --verbose
+```
+Outputs: `results/center_decoder.pkl`, `results/shadow_statistics.json`, `results/shadow_center_column.npy`.
+
+## 4) Optional: Livnium Steering (Phase 6)
+```bash
+cd ../PHASE6/code
+python3 shadow_rule30_phase6.py \
+  --data-dir ../../PHASE3/results \
+  --decoder-dir ../../PHASE4/results \
+  --output-dir ../results \
+  --num-steps 5000 \
+  --livnium-scale 0.01 \
+  --livnium-type vector \
+  --verbose
 ```
 
-## Available Scripts
+## 5) Proof Without Livnium (Phase 7)
+```bash
+cd ../PHASE7/code
+python3 run_phase7_proof.py \
+  --data-dir ../../PHASE3/results \
+  --decoder-dir ../../PHASE4/results \
+  --results-dir ../results \
+  --num-steps 5000
+```
+Generates decoder-consistency and no-Livnium density checks in `../results/` and `../results/PROOF_REPORT.md`.
 
-### Phase 2 Verification
-- `verify_phase2_integrity.py` - Algebraic validation
-- `verify_phase2_physics.py` - Physical validation
-
-### Phase 2 Analysis
-- `four_bit_chaos_tracker.py` - 14-D chaos tracker
-- `four_bit_system.py` - Constraint system builder
-- `solve_center_groebner.py` - Groebner basis solver
-
-## Results Location
-
-Phase 2 results are in:
-- `PHASE2/results/chaos14/` - Chaos tracker outputs
-- Original also preserved at: `../../results/chaos14/` (root level)
-
-## Import Paths
-
-✅ **Fixed!** All import paths have been updated to work with the new structure.
-
-Files in `PHASE2/code/` can now import from each other directly.
-
+## References
+- Phase-level quick starts: `PHASE3/QUICK_START.md`, `PHASE4/QUICK_START.md`.
+- See `PHASE2/docs/RUN_NOW.md` for additional Phase 2 details.

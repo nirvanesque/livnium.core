@@ -1,43 +1,28 @@
 # Rule 30 Center Column Research
 
-**Status**: Research in progress
+Research pipeline that maps Rule 30's center column into continuous geometry and reconstructs it through the "Shadow Rule 30" system.
 
-## Overview
+## Phase Map
+- [PHASE1](./PHASE1/) — ✅ 3-bit invariants discovered and exhaustively verified.
+- [PHASE2](./PHASE2/) — ✅ 4-bit constraint system + chaos geometry (chaos14/chaos15 data); physical validation caveats noted in docs.
+- [PHASE3](./PHASE3/) — 🚀 Motion law learned in PCA space (8D, polynomial degree 3); shadow trajectory + report generated.
+- [PHASE4](./PHASE4/) — 🚀 Non-linear decoder + energy injection; shadow matches Rule 30 density (~49%) with 94% decoder accuracy.
+- [PHASE5](./PHASE5/) — 📋 Reserved scaffold for future Livnium expansion.
+- [PHASE6](./PHASE6/) — ✅ Minimal Livnium steering integrated on top of PCA dynamics.
+- [PHASE7](./PHASE7/) — 🔬 Proof in progress: remove Livnium, stress-test initial conditions, and compare decoder outputs.
 
-This directory contains a complete research pipeline for analyzing Rule 30's center column using pattern frequency invariants and constraint systems.
+## How to Run
+- Use `QUICK_START.md` for the end-to-end command sequence from Phase 2 through Phase 7.
+- Each phase directory contains its own README or quick start with details and troubleshooting.
 
-## Phase Structure
+## Key Artifacts
+- `PHASE2/results/chaos14/` and `results/chaos15/` — raw chaos trajectories and plots.
+- `PHASE3/results/` — PCA model, dynamics fits, shadow trajectories, and evaluation outputs.
+- `PHASE4/results/` — decoder model, energy-injected shadow runs, and statistics.
+- `PHASE6/results/` — Livnium-influenced runs and metrics.
+- `PHASE7/results/` — proof experiments (no-Livnium) and generated reports.
+- `archive/` — legacy scripts retained for reference.
 
-### [Phase 1: 3-Bit Invariant Discovery](./PHASE1/)
-✅ **COMPLETE** - Found 4 exact linear invariants, verified exhaustively
-
-### [Phase 2: 4-Bit Constraint System & Chaos Tracker](./PHASE2/)
-🔄 **IN PROGRESS** - Building 4-bit constraint system, tracking chaos in 14-D free space
-
-### [Phase 3: Constraint Refinement & Manifold Decoding](./PHASE3/)
-📋 **PLANNED** - Fix constraint system, decode manifold structure
-
-## Quick Start
-
-1. **Review Phase 1**: See `PHASE1/README.md`
-2. **Run Phase 2**: See `PHASE2/README.md`
-3. **Check Results**: See `PHASE2/results/chaos14/`
-
-## Key Files
-
-- `PHASE1/` - 3-bit invariant discovery
-- `PHASE2/` - 4-bit constraint system and chaos tracker
-- `PHASE3/` - Future: constraint fixes and manifold analysis
-- `archive/` - Obsolete files
-
-## Research Goals
-
-1. Find exact invariants of Rule 30 ✅
-2. Build constraint system for center column 🔄
-3. Track chaos in free subspace 🔄
-4. Extract center column recurrence 📋
-5. Understand manifold structure 📋
-
-## Contact
-
-For questions about this research, see individual phase READMEs.
+## Notes
+- Run scripts from within their phase directories unless noted; adjust relative paths when launching from repo root.
+- Python dependencies are phase-specific; see each quick start for installation hints.
