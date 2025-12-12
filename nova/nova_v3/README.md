@@ -41,8 +41,6 @@ Vector-based Livnium physics applied to SNLI with a clean three-layer stack: cor
 - **Dynamic basins (optional)**: `BasinField` maintains per-label micro-basins that can be routed to, updated (EMA), spawned on high tension/low alignment, and pruned/merged periodically.
 - **Encoders**: Build OM/LO vectors and initial state `h0 = v_h - v_p` (with small noise for symmetry breaking).
   - `legacy`: Embedding + mean pool (`text/encoder.py`).
-  - `geom`: Pure geometric token signatures with tiny transformer/attention pooling (`text/geom_encoder.py`), consumes raw text.
-  - `sanskrit`: Phoneme-geometry projection (`text/sanskrit_encoder.py`), uses vocab tokens.
   - `quantum`: Pretrained Livnium quantum embeddings (`quantum_embed/text_encoder_quantum.py`), dimension fixed by the checkpoint.
 - **Head**: `SNLIHead` concatenates `h_final` with alignment/opposition/radial cues and a learned neutral direction to produce logits for entailment/contradiction/neutral.
 
