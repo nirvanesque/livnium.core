@@ -18,7 +18,7 @@ Vector-based Livnium physics applied to SNLI with a clean three-layer stack: cor
 | BERT-Base      | 110M       | 440MB  | 91.0%    | ~380 pairs/sec (GPU)         | GPU Cluster |
 | DistilBERT     | 66M        | 255MB  | ~91%     | ~715 pairs/sec (GPU)         | GPU Cluster |
 | RoBERTa-Base   | 125M       | 500MB  | 92.5%    | ~1,000 pairs/sec (GPU)       | GPU Cluster |
-| **Livnium**    | ~13M       | 52.3MB | 96.19%   | **7,800+ pairs/sec (CPU)**   | MacBook CPU |
+| **Livnium**    | ~13M       | 52.3MB | 75.19%   | **7,800+ pairs/sec (CPU)**   | MacBook CPU |
 
 *Livnium uses quantum-inspired collapse dynamics to enable high-efficiency logical inference via geometric vector space physics.*
 
