@@ -5,7 +5,7 @@ Vector-based Livnium physics applied to SNLI with a clean three-layer stack: cor
 ## Performance Highlights
 
 - **Livnium Quantum-Geometric Model**
-  - **Achieved SNLI Test Accuracy:** **96.19%**
+  - **Achieved SNLI Test Accuracy:** **75.19%**
   - **Model Size:** 52.3 MB (10x smaller than BERT/RoBERTa)
   - **Parameters:** ~13 Million
   - **Inference Throughput:** 7,800+ sentence-pairs/second (MacBook Pro M5, CPU)
