@@ -353,7 +353,7 @@ def main():
         ckpt_path=str(quantum_ckpt_path),
     ).to(device)
 
-    collapse_engine.load_state_dict(checkpoint["collapse_engine"], strict=False)
+    collapse_engine.load_state_dict(checkpoint["collapse_engine"])
     encoder.load_state_dict(checkpoint["encoder"])
     collapse_engine.eval()
     encoder.eval()

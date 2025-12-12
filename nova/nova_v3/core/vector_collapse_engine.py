@@ -70,15 +70,7 @@ class VectorCollapseEngine(nn.Module):
         self.basin_anchor_lr = basin_anchor_lr
         self.basin_prune_min_count = basin_prune_min_count
         self.basin_prune_merge_cos = basin_prune_merge_cos
-        
-        # State update network
-        # This learns how to evolve the state based on current configuration
-        self.update = nn.Sequential(
-            nn.Linear(dim, dim),
-            nn.Tanh(),
-            nn.Linear(dim, dim)
-        )
-        
+
         # Three anchors to create multi-basin geometry
         self.anchor_entail = nn.Parameter(torch.randn(dim))
         self.anchor_contra = nn.Parameter(torch.randn(dim))
@@ -169,7 +161,7 @@ class VectorCollapseEngine(nn.Module):
             trace["divergence_local"].append(div.detach())
             trace["tension_local"].append(tens.detach())
 
-            delta = self.update(h)
+            delta = torch.zeros_like(h)
             anchor_vec = F.normalize(h - anchor_dirs, dim=-1)
             h = h + delta - strengths.unsqueeze(-1) * div.unsqueeze(-1) * anchor_vec
 
@@ -252,9 +244,9 @@ class VectorCollapseEngine(nn.Module):
             trace["tension_entail"].append(t_e.detach())
             trace["tension_contra"].append(t_c.detach())
             trace["tension_neutral"].append(t_n.detach())
-            
-            # State update
-            delta = self.update(h)
+
+            # State update is physics-only (no learned MLP)
+            delta = torch.zeros_like(h)
             # Anchor forces: move toward/away each anchor along their difference vector
             e_vec = F.normalize(h - e_dir.unsqueeze(0), dim=-1)
             c_vec = F.normalize(h - c_dir.unsqueeze(0), dim=-1)

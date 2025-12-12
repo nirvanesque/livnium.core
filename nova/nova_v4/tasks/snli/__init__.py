@@ -5,7 +5,7 @@ SNLI-specific encoding and classification head.
 """
 
 from .head_snli import SNLIHead
-from .encoding_snli import QuantumSNLIEncoder
+from .encoding_snli import QuantumSNLIEncoder, ECWBSNLIEncoder
 
 
 class _RemovedEncoder:
@@ -16,4 +16,4 @@ class _RemovedEncoder:
 # Legacy names kept for import compatibility but raise on use.
 SNLIEncoder = GeometricSNLIEncoder = SanskritSNLIEncoder = _RemovedEncoder
 
-__all__ = ['SNLIHead', 'QuantumSNLIEncoder', 'SNLIEncoder', 'GeometricSNLIEncoder', 'SanskritSNLIEncoder']
+__all__ = ['SNLIHead', 'QuantumSNLIEncoder', 'ECWBSNLIEncoder', 'SNLIEncoder', 'GeometricSNLIEncoder', 'SanskritSNLIEncoder']

@@ -6,6 +6,7 @@ Task-agnostic text encoding.
 
 from .encoder import TextEncoder
 from .quantum_text_encoder import QuantumTextEncoder
+from .ecw_bt_encoder import ECWBTEncoder, tokenize as ecw_bt_tokenize
 
 # Optional/legacy encoders removed from tree; provide stubs so imports fail loudly if used.
 try:
@@ -25,4 +26,12 @@ except ImportError:
         def __init__(self, *args, **kwargs):
             raise ImportError("SanskritTextEncoder unavailable: sanskrit_encoder.py removed from repository")
 
-__all__ = ['TextEncoder', 'GeometricTextEncoder', 'SanskritTextEncoder', 'QuantumTextEncoder', 'tokenize']
+__all__ = [
+    'TextEncoder',
+    'GeometricTextEncoder',
+    'SanskritTextEncoder',
+    'QuantumTextEncoder',
+    'ECWBTEncoder',
+    'tokenize',
+    'ecw_bt_tokenize',
+]

@@ -83,14 +83,16 @@ nova/nova_v2/model/
 nova/nova/model/snli_phase1_vector/
 nova/nova/model/snli_phase1_om_lo_fixed/
 nova/nova/model/snli_phase1_divergence/
-experiments/NLI-ALL/nli_v4/features.csv
-experiments/NLI-ALL/nli_v4/features_auto.csv
-experiments/NLI-ALL/nli_v4/clusters/
-experiments/NLI-ALL/nli_v5/planet_output/
-experiments/rule30/PHASE4/results/
-experiments/rule30/PHASE2/results/
-experiments/rule30/results/
-experiments/rule30/main_tex.pdf
+arch-archive/experiments/NLI-ALL/nli_v4/features.csv
+arch-archive/experiments/NLI-ALL/nli_v4/features_auto.csv
+arch-archive/experiments/NLI-ALL/nli_v4/clusters/
+arch-archive/experiments/NLI-ALL/nli_v5/planet_output/
+arch-archive/experiments/rule30/PHASE4/results/
+arch-archive/experiments/rule30/PHASE2/results/
+arch-archive/experiments/rule30/results/
+arch-archive/experiments/rule30/main_tex.pdf
+nova/ecw-BT/wikipedia/
+nova/ecw-BT/data/
 
 # Brain/cache directories (model caches)
 brain/

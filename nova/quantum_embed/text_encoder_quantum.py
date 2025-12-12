@@ -19,7 +19,7 @@ from basin_field import BasinField
 
 
 class QuantumTextEncoder(nn.Module):
-    def __init__(self, ckpt_path: str):
+    def __init__(self, ckpt_path: str, use_gravity: bool = True):
         super().__init__()
 
         data = torch.load(ckpt_path, map_location="cpu")
@@ -32,6 +32,15 @@ class QuantumTextEncoder(nn.Module):
         self.dim = emb.size(1)
 
         self.embed = nn.Embedding.from_pretrained(emb, freeze=False, padding_idx=self.pad_idx)
+
+        # Gravity Pooling probe (learned importance weights)
+        self.use_gravity = use_gravity
+        if use_gravity:
+            self.gravity_probe = nn.Sequential(
+                nn.Linear(self.dim, self.dim // 4),
+                nn.Tanh(),
+                nn.Linear(self.dim // 4, 1),
+            )
 
         # Optional collapse state (dynamic basins)
         self.use_dynamic_basins: bool = bool(data.get("use_dynamic_basins", False))
@@ -75,21 +84,28 @@ class QuantumTextEncoder(nn.Module):
     def encode_sentence(self, token_ids: torch.Tensor) -> torch.Tensor:
         """
         token_ids: [seq_len] or [batch, seq_len]
-        Returns: [dim] or [batch, dim]
+        Returns: [dim] or [batch, dim] (Normalized!)
         """
+        is_single = token_ids.dim() == 1
+        if is_single:
+            token_ids = token_ids.unsqueeze(0)
         if token_ids.device != self.embed.weight.device:
             token_ids = token_ids.to(self.embed.weight.device)
-        emb = self.embed(token_ids)
+        emb = self.embed(token_ids)  # [batch, seq, dim]
         mask = (token_ids != self.pad_idx).float().unsqueeze(-1)
 
-        if token_ids.dim() == 1:
-            masked = emb * mask
-            denom = mask.sum(dim=0).clamp(min=1.0)
-            return (masked.sum(dim=0) / denom)
+        if self.use_gravity:
+            raw_mass = self.gravity_probe(emb)  # [batch, seq, 1]
+            raw_mass = raw_mass.masked_fill(token_ids.unsqueeze(-1) == self.pad_idx, -1e9)
+            mass_distribution = torch.softmax(raw_mass, dim=1)  # [batch, seq, 1]
+            sentence_vector = (emb * mass_distribution).sum(dim=1)
         else:
             masked = emb * mask
             denom = mask.sum(dim=1).clamp(min=1.0)
-            return (masked.sum(dim=1) / denom)
+            sentence_vector = masked.sum(dim=1) / denom
+
+        sentence_vector = torch.nn.functional.normalize(sentence_vector, p=2, dim=-1)
+        return sentence_vector[0] if is_single else sentence_vector
 
     def forward(self, token_ids: torch.Tensor) -> torch.Tensor:
         return self.encode_sentence(token_ids)

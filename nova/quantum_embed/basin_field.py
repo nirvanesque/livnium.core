@@ -20,7 +20,7 @@ class BasinField(nn.Module):
     Collection of anchors per label using pre-allocated tensors for vectorization.
     """
 
-    def __init__(self, dim: int = 256, max_basins_per_label: int = 64):
+    def __init__(self, dim: int = 256, max_basins_per_label: int = 256):
         super().__init__()
         self.dim = dim
         self.max_basins_per_label = max_basins_per_label

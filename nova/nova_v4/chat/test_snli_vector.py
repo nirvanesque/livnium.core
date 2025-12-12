@@ -19,7 +19,7 @@ repo_root = nova_v3_root.parent
 sys.path.insert(0, str(nova_v3_root))
 sys.path.insert(0, str(repo_root))
 
-from core import VectorCollapseEngine, BasinField
+from core import VectorCollapseEngine, BasinField, IntensionNet, apply_intension
 from tasks.snli import QuantumSNLIEncoder, SNLIHead
 from quantum_embed.text_encoder_quantum import QuantumTextEncoder
 from training.train_snli_vector import SNLIDataset, load_snli_data
@@ -39,6 +39,8 @@ def main():
                        help='Maximum sequence length')
     parser.add_argument('--errors-file', type=str, default=None,
                        help='If set, write misclassified samples to this JSONL file')
+    parser.add_argument('--use-intension-eval', action='store_true',
+                       help='Apply IntensionNet correction at eval (static collapse only)')
     
     args = parser.parse_args()
     
@@ -87,7 +89,7 @@ def main():
         raise ValueError("Saved model is missing quantum_ckpt; quantum encoder is required.")
     quantum_tokenizer = QuantumTextEncoder(quantum_ckpt)
 
-    def quantum_encode(text: str, max_len: int = args.max_len):
+    def encode_fn(text: str, max_len: int = args.max_len):
         tokens = quantum_tokenizer.tokenize(text)
         ids = [quantum_tokenizer.word2idx.get(t, quantum_tokenizer.unk_idx) for t in tokens]
         ids = ids[:max_len]
@@ -99,15 +101,21 @@ def main():
         ckpt_path=quantum_ckpt,
     ).to(device)
     head = SNLIHead(dim=model_args.dim).to(device)
+    intension_net = IntensionNet(dim=model_args.dim).to(device) if checkpoint.get("use_intension", False) else None
+    intension_alpha = getattr(model_args, "intension_alpha", 0.0)
     
     # Load weights
-    collapse_engine.load_state_dict(checkpoint['collapse_engine'], strict=False)
+    collapse_engine.load_state_dict(checkpoint['collapse_engine'])
     encoder.load_state_dict(checkpoint['encoder'])
     head.load_state_dict(checkpoint['head'])
+    if intension_net is not None and checkpoint.get("intension_net") is not None:
+        intension_net.load_state_dict(checkpoint["intension_net"])
     
     collapse_engine.eval()
     encoder.eval()
     head.eval()
+    if intension_net is not None:
+        intension_net.eval()
     
     # Load test data
     print("Loading test data...")
@@ -115,7 +123,7 @@ def main():
     print(f"Loaded {len(test_samples)} test samples")
     
     # Create dataset
-    test_dataset = SNLIDataset(test_samples, vocab=None, max_len=args.max_len, encode_fn=quantum_encode)
+    test_dataset = SNLIDataset(test_samples, vocab=None, max_len=args.max_len, encode_fn=encode_fn)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
     
     # Evaluate
@@ -141,9 +149,12 @@ def main():
             
             # Do NOT route by ground-truth labels at eval time; use static collapse.
             h_final, trace = collapse_engine.collapse(h0)
+            h_for_head = h_final
+            if args.use_intension_eval and intension_net is not None:
+                h_for_head = apply_intension(h_final, intension_net, alpha=intension_alpha)
             
             # Classify with directional signals
-            logits = head(h_final, v_p, v_h)
+            logits = head(h_for_head, v_p, v_h)
             pred = logits.argmax(dim=-1)
             
             correct += (pred == labels).sum().item()
