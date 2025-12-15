@@ -29,6 +29,40 @@ sys.path.insert(0, str(repo_root))
 from core import VectorCollapseEngine, BasinField
 from tasks.snli import QuantumSNLIEncoder, SNLIHead
 from quantum_embed.text_encoder_quantum import QuantumTextEncoder
+from core.basin_field import LABELS
+
+
+class EntropyController(nn.Module):
+    """
+    Tiny head to emit a non-negative entropy/deletion pressure scalar.
+    Uses mean of initial states to produce a batch-level pressure.
+    """
+
+    def __init__(self, dim: int):
+        super().__init__()
+        self.fc = nn.Sequential(
+            nn.Linear(dim, dim),
+            nn.Tanh(),
+            nn.Linear(dim, 1),
+            nn.Softplus(),  # enforce >=0
+        )
+
+    def forward(self, h0: torch.Tensor) -> torch.Tensor:
+        if h0.dim() == 1:
+            h0 = h0.unsqueeze(0)
+        mean_state = h0.mean(dim=0, keepdim=True)
+        return self.fc(mean_state)  # shape [1, 1]
+
+
+def sync_static_anchors_from_basin(collapse_engine: VectorCollapseEngine, basin_field: BasinField, weight_by: str = "utility"):
+    """
+    Derive static anchors from dynamic basins so static collapse has sensible directions.
+    """
+    label_to_param = {"E": "anchor_entail", "C": "anchor_contra", "N": "anchor_neutral"}
+    for label, name in label_to_param.items():
+        vec = basin_field.derive_anchor(label, weight_by=weight_by)
+        if vec is not None:
+            getattr(collapse_engine, name).data.copy_(vec)
 
 
 class SNLIDataset(Dataset):
@@ -123,6 +157,7 @@ def train_epoch(
     model,
     encoder,
     head,
+    entropy_controller,
     dataloader,
     optimizer,
     criterion,
@@ -133,16 +168,22 @@ def train_epoch(
     spawn_new: bool = True,
     prune_every: int = 0,
     start_step: int = 0,
+    entropy_budget: Optional[float] = None,
+    deletion_log: Optional[list] = None,
 ):
     """Train for one epoch."""
     model.train()
     encoder.train()
     head.train()
+    if entropy_controller is not None:
+        entropy_controller.train()
     
     total_loss = 0.0
     correct = 0
     total = 0
     global_step = start_step
+    # Use provided log list if given, otherwise start a new one when entropy control is active
+    deletion_events = deletion_log if deletion_log is not None else ([] if (use_dynamic_basins and entropy_controller is not None) else None)
     
     for batch in tqdm(dataloader, desc="Training"):
         labels = batch['label'].to(device)
@@ -150,6 +191,11 @@ def train_epoch(
         hyp_ids = batch['hyp_ids'].to(device)
         h0, v_p, v_h = encoder.build_initial_state(prem_ids, hyp_ids)
         
+        entropy_pressure = torch.zeros(1, device=device)
+        if use_dynamic_basins and entropy_controller is not None:
+            # Scalar pressure per batch; softplus ensures non-negative
+            entropy_pressure = entropy_controller(h0).mean()
+
         if use_dynamic_basins and basin_field is not None:
             h_final, trace = model.collapse_dynamic(
                 h0,
@@ -159,6 +205,9 @@ def train_epoch(
                 spawn_new=spawn_new,
                 prune_every=prune_every,
                 update_anchors=True,
+                entropy_pressure=float(entropy_pressure.detach().item()),
+                entropy_budget=entropy_budget,
+                deletion_log=deletion_events,
             )
         else:
             h_final, trace = model.collapse(h0)
@@ -191,6 +240,7 @@ def evaluate(
     model,
     encoder,
     head,
+    entropy_controller,
     dataloader,
     device,
     *,
@@ -201,6 +251,8 @@ def evaluate(
     model.eval()
     encoder.eval()
     head.eval()
+    if entropy_controller is not None:
+        entropy_controller.eval()
     
     correct = 0
     total = 0
@@ -291,6 +343,10 @@ def main():
                        help='Path to quantum_embeddings_final.pt (required unless provided by --resume checkpoint)')
     parser.add_argument('--resume', type=str, default=None,
                        help='Resume from a checkpoint (e.g., model/.../best_model.pt)')
+    parser.add_argument('--learn-entropy-pressure', action='store_true',
+                       help='Learn a scalar entropy/deletion pressure to prune basins during dynamic collapse')
+    parser.add_argument('--entropy-budget', type=float, default=None,
+                       help='Optional cap on total utility removed per collapse_dynamic call')
 
     args = parser.parse_args()
     
@@ -302,6 +358,7 @@ def main():
     resume_ckpt = None
     resume_args = None
     resume_use_dynamic = None
+    resume_entropy = None
     resume_global_step = 0
     if args.resume:
         resume_path = Path(args.resume)
@@ -313,6 +370,7 @@ def main():
         if resume_args is None:
             raise ValueError("Resume checkpoint missing args")
         resume_use_dynamic = resume_ckpt.get('use_dynamic_basins', None)
+        resume_entropy = resume_ckpt.get('use_entropy_controller', None)
         resume_global_step = resume_ckpt.get('global_step', 0)
 
         # Align critical hyperparameters to checkpoint to ensure state_dict compatibility
@@ -323,6 +381,8 @@ def main():
         # Respect saved dynamic basins usage
         if resume_use_dynamic is not None:
             args.disable_dynamic_basins = not resume_use_dynamic
+        if resume_entropy is not None:
+            args.learn_entropy_pressure = resume_entropy
     
     # Ensure quantum checkpoint path is available (either from CLI or resume args)
     if not args.quantum_ckpt:
@@ -377,6 +437,7 @@ def main():
     print("Creating models...")
     use_dynamic_basins = resume_use_dynamic if resume_use_dynamic is not None else (not args.disable_dynamic_basins)
     basin_field = BasinField(max_basins_per_label=args.basin_max_per_label) if use_dynamic_basins else None
+    use_entropy_controller = args.learn_entropy_pressure and use_dynamic_basins
     collapse_engine = VectorCollapseEngine(
         dim=args.dim,
         num_layers=args.num_layers,
@@ -393,6 +454,7 @@ def main():
         ckpt_path=args.quantum_ckpt,
     ).to(device)
     head = SNLIHead(dim=args.dim).to(device)
+    entropy_controller = EntropyController(dim=args.dim).to(device) if use_entropy_controller else None
 
     # Load weights if resuming
     if resume_ckpt is not None:
@@ -402,12 +464,15 @@ def main():
         head.load_state_dict(resume_ckpt['head'])
         if use_dynamic_basins and basin_field is not None and resume_ckpt.get('basin_field') is not None:
             basin_field.load_state_dict(resume_ckpt['basin_field'])
-    
+        if use_entropy_controller and entropy_controller is not None and resume_ckpt.get("entropy_controller"):
+            entropy_controller.load_state_dict(resume_ckpt["entropy_controller"])
+
     # Optimizer
     optimizer = optim.Adam(
         list(collapse_engine.parameters()) + 
         list(encoder.parameters()) + 
-        list(head.parameters()),
+        list(head.parameters()) +
+        (list(entropy_controller.parameters()) if entropy_controller is not None else []),
         lr=args.lr
     )
     if resume_ckpt is not None and 'optimizer' in resume_ckpt:
@@ -436,11 +501,15 @@ def main():
     for epoch in range(args.epochs):
         print(f"\nEpoch {epoch + 1}/{args.epochs}")
         
+        if use_dynamic_basins and basin_field is not None:
+            sync_static_anchors_from_basin(collapse_engine, basin_field)
+
         # Train
         train_loss, train_acc, global_step = train_epoch(
             collapse_engine,
             encoder,
             head,
+            entropy_controller,
             train_loader,
             optimizer,
             criterion,
@@ -450,6 +519,8 @@ def main():
             spawn_new=use_dynamic_basins,
             prune_every=args.basin_prune_every,
             start_step=global_step,
+            entropy_budget=args.entropy_budget,
+            deletion_log=None,
         )
         
         print(f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}")
@@ -459,10 +530,13 @@ def main():
         
         # Evaluate
         if dev_loader:
+            if use_dynamic_basins and basin_field is not None:
+                sync_static_anchors_from_basin(collapse_engine, basin_field)
             dev_acc, confusion = evaluate(
                 collapse_engine,
                 encoder,
                 head,
+                entropy_controller,
                 dev_loader,
                 device,
                 use_dynamic_basins=use_dynamic_basins,
@@ -481,10 +555,12 @@ def main():
                     'collapse_engine': collapse_engine.state_dict(),
                     'encoder': encoder.state_dict(),
                     'head': head.state_dict(),
+                    'entropy_controller': entropy_controller.state_dict() if entropy_controller is not None else None,
                     'vocab': vocab,
                     'args': args,
                     'basin_field': basin_field.state_dict() if basin_field is not None else None,
                     'use_dynamic_basins': use_dynamic_basins,
+                    'use_entropy_controller': use_entropy_controller,
                     'optimizer': optimizer.state_dict(),
                     'best_acc': best_acc,
                     'global_step': global_step,

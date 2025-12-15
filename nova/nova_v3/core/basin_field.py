@@ -6,7 +6,7 @@ and pruned during training. Provides a minimal state_dict interface for
 checkpointing.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import torch
 import torch.nn.functional as F
@@ -20,7 +20,7 @@ class BasinAnchor:
     Single micro-basin anchor.
     """
 
-    def __init__(self, center: torch.Tensor, label: str, step: int = 0):
+    def __init__(self, center: torch.Tensor, label: str, step: int = 0, decay_rate: float = 1.0, utility: float = 1.0):
         if label not in LABELS:
             raise ValueError(f"Invalid label {label}; expected one of {LABELS}")
         # Store as detached, unit vector on creation
@@ -28,6 +28,8 @@ class BasinAnchor:
         self.label = label
         self.count: int = 0
         self.last_used_step: int = step
+        self.decay_rate: float = decay_rate
+        self.utility: float = utility
 
 
 class BasinField:
@@ -63,6 +65,8 @@ class BasinField:
                         "label": anchor.label,
                         "count": anchor.count,
                         "last_used_step": anchor.last_used_step,
+                        "decay_rate": anchor.decay_rate,
+                        "utility": anchor.utility,
                     }
                     for anchor in anchors
                 ]
@@ -84,10 +88,111 @@ class BasinField:
                 center = anchor_state["center"]
                 if self.device is not None:
                     center = center.to(self.device)
-                anchor = BasinAnchor(center=center, label=anchor_state["label"])
+                anchor = BasinAnchor(
+                    center=center,
+                    label=anchor_state["label"],
+                    decay_rate=anchor_state.get("decay_rate", 1.0),
+                    utility=anchor_state.get("utility", 1.0),
+                )
                 anchor.count = anchor_state.get("count", 0)
                 anchor.last_used_step = anchor_state.get("last_used_step", 0)
                 self.anchors[label].append(anchor)
+
+    def apply_entropy_pressure(
+        self,
+        pressure: float,
+        budget: float | None = None,
+        step: int | None = None,
+        log: List[Dict] | None = None,
+    ):
+        """
+        Apply a scalar entropy/deletion pressure to all anchors.
+
+        Args:
+            pressure: Scalar ≥0 controlling decay amount.
+            budget: Optional cap on total utility that can be removed this call.
+            step: Optional step for logging.
+            log: Optional list to append deletion events.
+        """
+        if pressure <= 0:
+            return
+        remaining_budget = budget if budget is not None else float("inf")
+        deleted: List[Dict] = []
+        for label, anchors in self.anchors.items():
+            kept: List[BasinAnchor] = []
+            for a in anchors:
+                decay = pressure * a.decay_rate
+                if remaining_budget <= 0:
+                    kept.append(a)
+                    continue
+                # Apply decay but do not exceed remaining budget
+                decay = min(decay, remaining_budget)
+                a.utility -= decay
+                remaining_budget -= decay
+                if a.utility > 0:
+                    kept.append(a)
+                else:
+                    deleted.append(
+                        {
+                            "label": label,
+                            "last_used_step": a.last_used_step,
+                            "step": step,
+                        }
+                    )
+            self.anchors[label] = kept
+
+        if log is not None and deleted:
+            log.append(
+                {
+                    "step": step,
+                    "pressure": pressure,
+                    "budget": budget,
+                    "deleted": deleted,
+                }
+            )
+        if deleted:
+            print(
+                f"[entropy_prune] step={step} pressure={pressure:.4f} "
+                f"budget={budget} deleted={len(deleted)}"
+            )
+
+    def derive_anchor(
+        self,
+        label: str,
+        weight_by: str = "utility",
+    ) -> Optional[torch.Tensor]:
+        """
+        Compute a representative anchor vector for a label from its basins.
+
+        Args:
+            label: One of {E, N, C}
+            weight_by: "utility" (default) or "count"
+
+        Returns:
+            Normalized anchor tensor or None if no basins exist.
+        """
+        if label not in LABELS:
+            raise ValueError(f"Invalid label {label}; expected one of {LABELS}")
+        anchors = self.anchors.get(label, [])
+        if not anchors:
+            return None
+        centers = []
+        weights = []
+        for a in anchors:
+            if weight_by == "count":
+                w = float(a.count)
+            else:
+                w = float(a.utility)
+            if w <= 0:
+                continue
+            centers.append(a.center)
+            weights.append(w)
+        if not centers:
+            return None
+        stacked = torch.stack(centers)
+        w = torch.tensor(weights, device=stacked.device, dtype=stacked.dtype)
+        mean = (w.unsqueeze(1) * stacked).sum(dim=0) / w.sum().clamp(min=1e-6)
+        return F.normalize(mean, dim=0)
 
 
 def route_to_basin(

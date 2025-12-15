@@ -63,6 +63,12 @@ def main():
         basin_field = BasinField(max_basins_per_label=basin_state.get("max_basins_per_label", 64))
         basin_field.load_state_dict(basin_state)
         basin_field.to(device)
+        # Derive static anchors from basins so static collapse has meaningful directions
+        label_to_param = {"E": "anchor_entail", "C": "anchor_contra", "N": "anchor_neutral"}
+        for label, param in label_to_param.items():
+            vec = basin_field.derive_anchor(label)
+            if vec is not None:
+                getattr(collapse_engine, param).data.copy_(vec.to(device))
     else:
         use_dynamic_basins = False
 

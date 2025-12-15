@@ -48,6 +48,8 @@ Implemented in `core/basin_field.py`, invoked via `collapse_dynamic`.
 - EMA update: after collapse, update basin center `c <- normalize((1 - lr) * c + lr * h_hat_final)` with lr=0.05.
 - Prune/merge (optional cadence): prune anchors with `count < min_count` (default 10); merge if `cos(c_i, c_j) > 0.97`.
 - Eval safety: dynamic routing is disabled during validation/test to avoid label leakage; static collapse is used instead.
+- Entropy pressure knob: pass `entropy_pressure` to `collapse_dynamic` to decay basin utilities globally; basins with utility ≤ 0 are removed, with optional budget and audit log. Training can learn this scalar via `--learn-entropy-pressure`; default is 0 (no pruning).
+- Anchor sync for eval: after dynamic training, static anchors are derived from basin centers (utility-weighted) so static collapse at eval has meaningful directions.
 
 ## Text Encoding & Initialization (`tasks/snli/encoding_snli.py`, `text/quantum_text_encoder.py`)
 - Uses pretrained Livnium quantum embeddings (`../quantum_embed/quantum_embeddings_final.pt`).
@@ -80,6 +82,7 @@ logits = MLP(features) -> (E, N, C)
 - Balancing: neutral oversampling (`--neutral-oversample`) and neutral class weight (`--neutral-weight`); optional label smoothing.
 - Dynamic basins: on by default; disable via `--disable-dynamic-basins`. Basin spawn/prune thresholds configurable with `--basin-*`.
 - Collapse update: no learned MLP; forces are purely physics-based.
+- Entropy pressure (optional): `--learn-entropy-pressure` adds a tiny head that outputs a non-negative scalar; `--entropy-budget` caps removal per step. Defaults keep pressure at 0.
 - Checkpoint: `best_model.pt` stores collapse engine, encoder, head, optional basin field, optimizer, args, and `use_dynamic_basins`.
 
 ## Evaluation (`chat/test_snli_vector.py`)

@@ -1,5 +1,28 @@
 # ECW-BT Master Plan (Official)
 
+## Implementation Status (Updated)
+
+**What Was Built**: Level-0 pipeline with SBERT seeding and pairwise CCD training.
+
+**Key Differences from Original Plan**:
+- Uses pre-built pair shards (`pairs_pos_*.bin`) instead of streaming windows
+- SBERT seed (`V_seed.npy`) instead of random initialization
+- Fusion anchoring prevents catastrophic forgetting (teacher acts as elastic scaffold)
+- Pre-generated negatives for performance (eliminates CPU→GPU transfers)
+- Validation script (`validate_level0.py`) for acceptance testing
+- Optimized for Apple Silicon (MPS) with chunked negative processing
+
+**Pipeline Phases**:
+- **Phase 0**: `make_sbert_seed.py` - Create teacher vectors from SBERT
+- **Phase 1A**: `build_vocab.py` - Build vocabulary and frequency table
+- **Phase 1B**: `build_pairs.py` - Extract co-occurrence pairs to binary shards
+- **Phase 2**: `distill_pairwise.py` - Train with CCD physics + fusion anchoring
+- **Phase 3**: `validate_level0.py` - Acceptance validation (drift, collapse, neighbors)
+
+**Original Plan**: See below (kept for historical reference)
+
+---
+
 ## Scope & Constraints
 - Build only ECW-BT Level-0: geometry-only basins with CCD and attractor-barrier hybrid forces.
 - No Nova v4, no collapse engine beyond gravity pooling, no IntensionNet, no SNLI, no backprop nets.

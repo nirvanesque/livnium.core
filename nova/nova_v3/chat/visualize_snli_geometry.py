@@ -363,6 +363,12 @@ def main():
         basin_field = BasinField(max_basins_per_label=basin_state.get("max_basins_per_label", 64))
         basin_field.load_state_dict(basin_state)
         basin_field.to(device)
+        # Derive static anchors from basins so static projection makes sense
+        label_to_param = {"E": "anchor_entail", "C": "anchor_contra", "N": "anchor_neutral"}
+        for label, param in label_to_param.items():
+            vec = basin_field.derive_anchor(label)
+            if vec is not None:
+                getattr(collapse_engine, param).data.copy_(vec.to(device))
         print(
             "Loaded dynamic basins:",
             {k: len(v) for k, v in basin_field.anchors.items()},

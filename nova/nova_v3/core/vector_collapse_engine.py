@@ -91,6 +91,9 @@ class VectorCollapseEngine(nn.Module):
         spawn_new: bool = True,
         prune_every: int = 0,
         update_anchors: bool = True,
+        entropy_pressure: float = 0.0,
+        entropy_budget: Optional[float] = None,
+        deletion_log: Optional[List[Dict]] = None,
     ) -> Tuple[torch.Tensor, Dict[str, List[torch.Tensor]]]:
         """
         Collapse with dynamic per-label basins.
@@ -103,6 +106,9 @@ class VectorCollapseEngine(nn.Module):
             spawn_new: Whether to allow spawning new basins
             prune_every: If >0, prune/merge every N steps
             update_anchors: Whether to adapt basin centers after collapse
+            entropy_pressure: Scalar pressure to decay/prune low-utility basins (model-controlled knob)
+            entropy_budget: Optional cap on total utility removed per call
+            deletion_log: Optional list to append deletion events for auditing
         """
         squeeze = False
         h = h0
@@ -120,6 +126,14 @@ class VectorCollapseEngine(nn.Module):
             1: self.strength_contra,
             2: self.strength_neutral,
         }
+
+        # Apply entropy pressure before routing to drop weak basins under physics control
+        basin_field.apply_entropy_pressure(
+            pressure=float(entropy_pressure),
+            budget=entropy_budget,
+            step=global_step,
+            log=deletion_log,
+        )
 
         anchors = []
 
