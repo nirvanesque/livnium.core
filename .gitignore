@@ -77,6 +77,8 @@ archive/
 experiments/nli/data/
 **/data/
 *.jsonl
+*.npy
+*.bin
 
 # Large artifacts / model outputs
 nova/nova_v2/model/
