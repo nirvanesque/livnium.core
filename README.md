@@ -57,7 +57,7 @@ See `livnium/QUICKSTART.md` for detailed setup and examples.
 livnium/
   kernel/          # Immutable laws (pure math, no torch/numpy)
   engine/          # Runtime dynamics (collapse, basins)
-  domains/         # Problem encoders (SNLI, market, ramsey, toy)
+  domains/         # Problem encoders (SNLI, market, ramsey, toy, mindmap)
   training/        # Training infrastructure
   datasets/        # Data loaders
   instrumentation/ # Logging, metrics, profiling
@@ -76,6 +76,7 @@ livnium/
 - **SNLI** - Stanford Natural Language Inference
 - **Market** - Financial time series regime classification
 - **Ramsey** - Graph coloring constraint satisfaction
+- **Mindmap** - Text document analysis and thought graph visualization
 
 ## Key Features
 
