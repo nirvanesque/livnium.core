@@ -48,7 +48,7 @@ def main():
 
     if args.sentence:
         print(f"\n--- Collapse Vector for: '{args.sentence}' ---")
-        s_vec = tracker.sentence_vector(args.sentence, iterations=5, resonance_strength=args.resonance or 1.0)
+        s_vec = tracker.sentence_vector(args.sentence, iterations=5, resonance_strength=args.resonance)
         if getattr(tracker, "last_reward_log", None):
             log = tracker.last_reward_log
             print("\n[Economic Physics Telemetry]")
