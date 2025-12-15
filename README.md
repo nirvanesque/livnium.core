@@ -4,6 +4,8 @@
 
 LIVNIUM is a system that replaces "searching for answers" with "removing impossible futures until only one path can fall."
 
+> **⚠️ Stability Notice**: This version (v1.0.0) is **not stable** and is intended for research purposes only. The API may change, and there may be bugs or incomplete features. Use at your own risk. Production use is not recommended at this time.
+
 ## What is LIVNIUM?
 
 LIVNIUM is a geometric computing platform built on immutable laws. Instead of training neural networks to approximate functions, LIVNIUM uses geometric constraints and physics-based collapse to eliminate impossible states until only valid solutions remain.
