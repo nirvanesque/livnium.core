@@ -47,6 +47,7 @@ htmlcov/
 
 # === Archives (keep local only) ===
 archive/
+archives-local/
 *.tar.gz
 
 # === Data & large artifacts ===

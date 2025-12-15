@@ -1,1 +1,0 @@
-# ECW-BT source package

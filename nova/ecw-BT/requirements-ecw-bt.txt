@@ -1,9 +1,0 @@
-numpy
-regex
-tqdm
-torch
-sentence-transformers
-psutil
-pandas
-plotly
-umap-learn
