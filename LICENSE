@@ -1,0 +1,118 @@
+# LIVNIUM LICENSE v1.0
+
+### (Law-Preserving Research License)
+
+Copyright © 2025 Chetan Patil
+All rights reserved.
+
+---
+
+## 1. Grant of Rights
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to **use, study, modify, and distribute** the Software **for non-commercial purposes**, including research, education, and open scientific collaboration, subject to the terms below.
+
+---
+
+## 2. Attribution Requirement
+
+Any use, modification, or distribution of the Software must include clear attribution to:
+
+> **LIVNIUM**
+> Original Author: Chetan Patil
+> Repository: https://github.com/chetanxpatil/livnium.core (or successor)
+
+Attribution must be included in documentation, academic papers, and derivative repositories.
+
+---
+
+## 3. Non-Commercial Use Only
+
+The Software **may not be used**, directly or indirectly, for **commercial purposes**, including but not limited to:
+
+* Selling the Software or derivatives
+* Offering the Software as a paid service (SaaS, API, hosted model)
+* Incorporating the Software into proprietary or closed-source products
+* Internal commercial use that provides competitive or monetary advantage
+
+Commercial licensing **requires explicit written permission** from the copyright holder.
+
+---
+
+## 4. Kernel Integrity Clause (Critical)
+
+The **LIVNIUM Kernel** (defined as `livnium/kernel/` and its contents):
+
+* Represents **immutable laws and invariants**
+* **Must not be modified** in any derivative work **and still be called "LIVNIUM"**
+
+Modified kernels must:
+
+* Be clearly renamed
+* Remove all references to "LIVNIUM"
+* State explicitly that the system is **not LIVNIUM-compliant**
+
+This clause preserves scientific and conceptual integrity.
+
+---
+
+## 5. Naming and Representation
+
+The names **"LIVNIUM"**, **"LUGK"**, **"LUGE"**, and associated terminology are reserved identifiers.
+
+You may not claim:
+
+* Official endorsement
+* Canonical status
+* Compatibility with LIVNIUM laws
+
+unless your implementation **fully complies with the kernel invariants**.
+
+---
+
+## 6. Open Research Derivatives Allowed
+
+You may:
+
+* Fork the repository
+* Extend the engine
+* Add domains, models, and training systems
+* Publish results and papers
+
+Provided that:
+
+* This license is preserved
+* Attribution is maintained
+* Kernel integrity is respected
+* Use remains non-commercial
+
+---
+
+## 7. No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+---
+
+## 8. Limitation of Liability
+
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE OF THE SOFTWARE.
+
+---
+
+## 9. Commercial Licensing
+
+Commercial use, proprietary integration, or paid deployment of LIVNIUM or its derivatives requires a **separate commercial license**.
+
+Contact:
+**Chetan Patil**
+(email or contact link you choose)
+
+---
+
+## 10. Acceptance
+
+By using, copying, or modifying the Software, you agree to be bound by the terms of this License.
+
+---
+
+### End of License
