@@ -81,9 +81,11 @@ experiments/nli/data/
 
 # Large artifacts / model outputs
 nova/nova_v2/model/
+nova/nova_v3/model/
 nova/nova/model/snli_phase1_vector/
 nova/nova/model/snli_phase1_om_lo_fixed/
 nova/nova/model/snli_phase1_divergence/
+*.pt
 arch-archive/experiments/NLI-ALL/nli_v4/features.csv
 arch-archive/experiments/NLI-ALL/nli_v4/features_auto.csv
 arch-archive/experiments/NLI-ALL/nli_v4/clusters/
