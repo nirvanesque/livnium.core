@@ -107,7 +107,9 @@ def main():
     # Probe words for drift tracking
     probe_words = ["king", "queen", "paris", "france", "cat", "dog", "kitten", "puppy", "man", "woman"]
     w2i = {w: i for i, w in enumerate(vocab)}
-    probe_indices = np.array([w2i.get(w) for w in probe_words if w2i.get(w) is not None], dtype=np.int64)
+    # Filter to only include words that exist in vocabulary
+    valid_probe_words = [w for w in probe_words if w in w2i]
+    probe_indices = np.array([w2i[w] for w in valid_probe_words], dtype=np.int64)
     
     print(f"[validate] Computing metrics...")
     
@@ -155,7 +157,7 @@ def main():
         "dim": int(V_student.shape[1]),
         "metrics": {
             "teacher_drift_mean": mean_drift,
-            "teacher_drift_probe_words": [probe_words[i] for i in range(len(probe_indices))],
+            "teacher_drift_probe_words": valid_probe_words,
             "collapse_metric": collapse_metric,
             "nearest_neighbors": neighbor_results,
             "analogies": analogy_results,

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -80,6 +81,8 @@ def main():
         payload["vocab"] = vocab
         payload["freq"] = freqs.tolist()
         payload["meta"]["max_vocab"] = args.max_vocab
+        # FIX: Recalculate masses based on the filtered frequencies
+        payload["mass"] = [1.0 / math.log(1.0 + f) for f in freqs]
         (out_dir / "mass_table.json").write_text(json.dumps(payload))
         print(f"[save] mass table -> {out_dir/'mass_table.json'}")
 
