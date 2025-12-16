@@ -31,10 +31,16 @@ except ImportError:
 class SNLIModel(nn.Module):
     """Complete model for SNLI domain."""
     
-    def __init__(self, dim: int = 256, num_layers: int = 5, vocab_size: int = 2000):
+    def __init__(self, dim: int = 256, num_layers: int = 5, vocab_size: int = 2000,
+                 enable_basins: bool = False, basin_threshold: str = "v4"):
         super().__init__()
         self.encoder = SNLIEncoder(dim=dim, vocab_size=vocab_size)
-        self.collapse_engine = CollapseEngine(dim=dim, num_layers=num_layers)
+        self.collapse_engine = CollapseEngine(
+            dim=dim, 
+            num_layers=num_layers,
+            enable_basins=enable_basins,
+            basin_threshold=basin_threshold
+        )
         self.head = SNLIHead(dim=dim)
     
     def forward(self, batch):
@@ -64,9 +70,13 @@ def parse_args():
     parser.add_argument("--layers", type=int, default=5, help="Collapse engine layers")
     parser.add_argument("--vocab-size", type=int, default=2000, help="Vocabulary size")
     
+    # Basins
+    parser.add_argument("--enable-basins", action="store_true", help="Model has basins enabled")
+    parser.add_argument("--basin-threshold", type=str, default="v4", choices=["v3", "v4"], help="Basin threshold version")
+    
     # Evaluation arguments
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
-    parser.add_argument("--device", type=str, default=None, help="Device (cpu/cuda, auto if None)")
+    parser.add_argument("--device", type=str, default=None, help="Device (cpu/cuda/mps, auto if None)")
     
     return parser.parse_args()
 
@@ -76,7 +86,15 @@ def main():
     args = parse_args()
     
     # Setup
-    device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
+    if args.device:
+        device = args.device
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    elif torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
+    
     logger = LivniumLogger()
     
     logger.info(f"Testing SNLI model on {device}")
@@ -94,7 +112,13 @@ def main():
     logger.info(f"Test set size: {len(test_dataset)} samples")
     
     # Create model
-    model = SNLIModel(dim=args.dim, num_layers=args.layers, vocab_size=args.vocab_size).to(device)
+    model = SNLIModel(
+        dim=args.dim, 
+        num_layers=args.layers, 
+        vocab_size=args.vocab_size,
+        enable_basins=args.enable_basins,
+        basin_threshold=args.basin_threshold
+    ).to(device)
     
     # Load checkpoint if provided
     if args.checkpoint and Path(args.checkpoint).exists():
