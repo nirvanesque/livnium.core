@@ -4,9 +4,12 @@
 # Get the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+# Get the repo root (parent of scripts directory)
+REPO_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+
 # Set PYTHONPATH to include the repo root
-export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
+export PYTHONPATH="$REPO_ROOT:$PYTHONPATH"
 
 # Run the example
-python3 "$SCRIPT_DIR/livnium/examples/document_pipeline_example.py"
+python3 "$REPO_ROOT/livnium/examples/document_pipeline_example.py"
 
