@@ -62,6 +62,8 @@ livnium/
   datasets/        # Data loaders
   instrumentation/ # Logging, metrics, profiling
   examples/        # Training scripts
+  integration/     # Constraint query API + document pipeline
+scripts/           # Shell scripts for running examples and tests
 ```
 
 ## Documentation

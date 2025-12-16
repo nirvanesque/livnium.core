@@ -21,7 +21,7 @@ This comprehensive test suite verifies:
 ### 2. Run the Examples
 
 ```bash
-./run_integration_examples.sh
+./scripts/run_integration_examples.sh
 ```
 
 Or manually:
@@ -245,7 +245,7 @@ All new files are in the repository:
 - **Examples & Tests**:
   - `livnium/examples/document_pipeline_example.py`
   - `test_integration_features.py`
-  - `run_integration_examples.sh`
+  - `scripts/run_integration_examples.sh`
 
 - **Documentation**:
   - `QUICK_START_INTEGRATION.md`

@@ -33,7 +33,7 @@ This runs all integration feature tests:
 
 **Method 1: Using the run script (recommended)**
 ```bash
-./run_integration_examples.sh
+./scripts/run_integration_examples.sh
 ```
 
 **Method 2: Manual run with PYTHONPATH**
