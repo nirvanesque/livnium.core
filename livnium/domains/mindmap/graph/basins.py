@@ -16,7 +16,7 @@ This module detects basins by:
 
 from typing import List, Dict, Any, Set, Tuple
 import torch
-from .ingest import ThoughtNode
+from ..ingestion.ingest import ThoughtNode
 
 
 def identify_basins(

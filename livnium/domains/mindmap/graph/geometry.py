@@ -9,7 +9,7 @@ from typing import List, Dict, Any
 import torch
 from livnium.kernel.physics import alignment, divergence, tension
 from livnium.engine.ops_torch import TorchOps
-from .ingest import ThoughtNode
+from ..ingestion.ingest import ThoughtNode
 
 
 class ThoughtState:

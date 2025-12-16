@@ -29,22 +29,30 @@ This is a **domain plugin** - it uses `kernel.physics` for measurement, not for 
 
 ### Quick Start: Drop Files and Run
 
-1. **Drop your files** into `livnium/domains/mindmap/sources/`:
-   - Text files: `.txt`, `.md`
-   - Code files: `.py`, `.js`, `.ts`, `.java`, `.cpp`, `.go`, `.rs`, etc.
-   - **JSON files**: `.json` (parsed and content extracted)
-   - Any text-based file format
+1.  **Drop your files** into `livnium/domains/mindmap/sources/`:
+    *   **Crucial**: The system reads *only* from this folder. If it's empty, your graph will be empty.
+    *   Supported: `.txt`, `.md`, `.py`, `.js`, `.ts`, `.java`, `.cpp`, `.go`, `.rs`, `.json`
 
-2. **Run the demo**:
-   ```bash
-   python3 -m livnium.domains.mindmap.demo
-   ```
+2.  **Run the demo**:
 
-3. **View the graph**: Open `livnium/tools/visualize/viewer.html` in a browser
+    > **⚠️ IMPORTANT**: You must run this command from the **repository root**.
+    > Do not try to run the file directly (e.g., `python demo.py`).
 
-The demo will:
-1. Automatically scan `sources/` folder for all supported files
-2. Ingest core documentation (README.md, ARCHITECTURE.md, QUICKSTART.md)
+    ```bash
+    # 1. Go to the root of the repository
+    cd /path/to/clean-nova-livnium
+
+    # 2. Run as a module
+    python3 -m livnium.domains.mindmap.demo
+    ```
+
+3.  **View the graph**: 
+    -   Start the viewer server:
+        ```bash
+        cd livnium/tools/visualize
+        python3 -m http.server 8000
+        ```
+    -   Open in browser: [http://localhost:8000/viewer.html](http://localhost:8000/viewer.html)
 3. Embed all text/code blocks using available encoder
 4. Measure geometry using kernel.physics (alignment, divergence, tension)
 5. Export to `livnium/tools/visualize/mindmap.json`

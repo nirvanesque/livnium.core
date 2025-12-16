@@ -10,3 +10,13 @@ tqdm
 # Uncomment to enable JIT compilation for better performance (used in core/classical/livnium_core_system.py)
 # numba>=0.56.0
 
+# Optional: LLM Narrator (for basin narration polish)
+# For local models (llama.cpp):
+# llama-cpp-python>=0.2.0
+# Download models: https://huggingface.co/models?library=gguf
+# Recommended: Phi-3-mini, Qwen2.5-3B, Mistral-7B (quantized)
+#
+# For cloud (Groq API - very fast, free tier):
+# groq>=0.4.0
+# Get API key: https://console.groq.com/
+

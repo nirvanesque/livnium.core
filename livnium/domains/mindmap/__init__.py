@@ -8,7 +8,7 @@ This is a domain plugin - it uses kernel.physics for measurement,
 not for dynamics. The visualizer shows the idea-field as-is.
 """
 
-from .ingest import (
+from .ingestion.ingest import (
     ThoughtNode,
     ingest_markdown,
     ingest_file,
@@ -16,12 +16,15 @@ from .ingest import (
     scan_sources_folder,
     embed_thoughts,
 )
-from .geometry import measure_thought_graph, compute_node_masses
-from .export import export_to_json, print_statistics
-from .encoder import get_encoder
-from .basins import identify_basins, summarize_basin, compute_basin_statistics
-from .basin_narrator import narrate_basin, narrate_all_basins
-from .narrator import summarize_basin as fast_summarize_basin, format_basin_summary
+from .graph.geometry import measure_thought_graph, compute_node_masses
+from .utils.export import export_to_json, print_statistics
+from .ingestion.encoder import get_encoder
+from .graph.basins import (
+    identify_basins,
+    compute_basin_statistics,
+)
+from .narrative.basin_narrator import narrate_basin, narrate_all_basins
+from .narrative.narrator import summarize_basin as fast_summarize_basin, format_basin_summary
 
 __all__ = [
     "ThoughtNode",

@@ -13,7 +13,7 @@ Design:
 
 import os
 from typing import List, Dict, Any, Optional
-from .ingest import ThoughtNode
+from ..ingestion.ingest import ThoughtNode
 
 
 # Feature flags
@@ -352,7 +352,7 @@ One clear sentence. No numbers or technical terms."""
     
     # Call Groq API (very fast)
     response = client.chat.completions.create(
-        model="llama-3-8b-instant",  # Fast, free tier model
+        model="llama-3.1-8b-instant",  # Fast, free tier model
         messages=[
             {"role": "system", "content": "You explain intent and purpose, not statistics. Focus on what problems clusters solve and what tensions they address."},
             {"role": "user", "content": prompt}

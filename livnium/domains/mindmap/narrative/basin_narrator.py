@@ -25,7 +25,7 @@ Placement: Called only by viewer/export layer, never by geometry/physics.
 """
 
 from typing import List, Dict, Any
-from .ingest import ThoughtNode
+from ..ingestion.ingest import ThoughtNode
 
 
 def narrate_basin(

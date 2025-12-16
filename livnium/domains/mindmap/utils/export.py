@@ -8,7 +8,7 @@ This is the externalized mind - structure the physics earned.
 import json
 from pathlib import Path
 from typing import List, Dict, Any
-from .ingest import ThoughtNode
+from ..ingestion.ingest import ThoughtNode
 
 
 def export_to_json(

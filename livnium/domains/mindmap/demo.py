@@ -6,19 +6,19 @@ Processes files from sources/ folder and core docs, exports the thought graph.
 
 from pathlib import Path
 from livnium.domains.mindmap import (
-    ingest_markdown,
+    ingest_markdown, # Import from the public API (which we fixed in __init__.py)
     ingest_sources_folder,
+    get_encoder,
     embed_thoughts,
     measure_thought_graph,
     compute_node_masses,
-    export_to_json,
     print_statistics,
-    get_encoder,
     identify_basins,
-    compute_basin_statistics,
     narrate_all_basins,
+    export_to_json,
     fast_summarize_basin,
-    format_basin_summary,
+    compute_basin_statistics, # Retained from original, as it's used
+    format_basin_summary, # Retained from original, as it's used
 )
 
 
@@ -44,12 +44,16 @@ def main():
     else:
         print("  → No files found in sources/ folder (add .txt, .md, or code files)")
     
-    # 2. Ingest core documentation files (optional)
-    markdown_files = [
-        repo_root / "livnium" / "README.md",
-        repo_root / "livnium" / "ARCHITECTURE.md",
-        repo_root / "livnium" / "QUICKSTART.md",
-    ]
+    # 2. Ingest core documentation files (OPTIONAL - Disabled by default)
+    # The user wants empty sources to mean empty graph.
+    markdown_files = [] 
+    
+    # Optional: You could uncomment this to auto-ingest repo docs
+    # markdown_files = [
+    #     repo_root / "livnium" / "README.md",
+    #     repo_root / "livnium" / "ARCHITECTURE.md",
+    #     repo_root / "livnium" / "QUICKSTART.md",
+    # ]
     
     existing_files = [f for f in markdown_files if f.exists()]
     if existing_files:
