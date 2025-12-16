@@ -8,10 +8,11 @@ LIVNIUM is a system that replaces "searching for answers" with "removing impossi
 livnium/
   kernel/          # LUGK: Immutable laws + constants + invariants (pure math, no torch/numpy)
   engine/          # LUGE: Runtime dynamics (collapse, basins, promotion)
-  domains/         # SNLI, market, ramsey, etc. as plugins
+  domains/         # SNLI, market, ramsey, document, etc. as plugins
   training/        # Trainers, losses, schedules, eval
   datasets/        # Loaders, preprocessors (no physics here)
   instrumentation/ # Logging, metrics, profilers, dashboards
+  integration/     # Constraint query API + document pipeline integration
   tests/           # Kernel invariants + engine behavior tests
 ```
 
@@ -75,6 +76,7 @@ Domains cannot modify kernel or engine. They use:
 
 - **`domains/toy/`** - Minimal test domain for kernel+engine wiring
 - **`domains/snli/`** - SNLI (Stanford Natural Language Inference) domain
+- **`domains/document/`** - Document workflow domain (retrieval, citation validity, contradiction checks)
 
 ## Usage Example
 
@@ -130,6 +132,50 @@ python3 livnium/tests/test_full_pipeline.py
 - `BASIN_TENSION_THRESHOLD_V4 = 0.20` - Basin spawn threshold (v4)
 - `MAX_NORM = 10.0` - Norm clipping limit
 - See `engine/config/defaults.py` for full list
+
+## Integration & Constraint System
+
+LIVNIUM now provides first-class constraint query and explanation capabilities:
+
+### Transparent Refusal Paths
+
+Kernel invariants are exposed as queryable constraints that agents can check and understand:
+
+```python
+from livnium.kernel.constraints import ConstraintChecker
+from livnium.kernel.ledgers import Ledger
+
+checker = ConstraintChecker(Ledger())
+check = checker.check_transition(state_before, state_after, Operation.COLLAPSE)
+
+if not check.is_admissible:
+    print(check.explain())
+    # "Action is inadmissible because:
+    #  - State before collapse operation is invalid..."
+```
+
+### Document Workflow Domain
+
+A minimal reference domain for real-world document processing:
+- **Retrieval**: Finding relevant documents using alignment
+- **Citation Validity**: Verifying citations are valid and consistent
+- **Contradiction Checks**: Detecting contradictions within documents
+
+### Document Pipeline Integration
+
+Complete `draft > verify constraints > finalize` workflow for AI Lawyer-style document pipelines:
+
+```python
+from livnium.integration.pipeline import DocumentPipeline
+
+pipeline = DocumentPipeline(encoder, collapse_engine, head)
+result = pipeline.run(claims, document, query="search query")
+
+if not result.is_accepted:
+    print(f"Rejected: {result.explanation}")
+```
+
+See `integration/README.md` for detailed documentation.
 
 ## The One Rule
 
