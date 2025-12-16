@@ -103,9 +103,17 @@ draft_result = pipeline.draft(claims, document)
 # Verify
 verification = pipeline.verify(draft_result, query="search query")
 
-# Finalize
-result = pipeline.finalize(draft_result, verification)
+# Finalize (with acceptance threshold)
+result = pipeline.finalize(draft_result, verification, accept_threshold=0.7)
+
+if not result.is_accepted:
+    print(f"Rejected: {result.explanation}")
+    # Explanation includes both verification failures and threshold failures
+    # Example: "Document rejected: All constraints satisfied; 
+    #          Retrieval score 0.492 below threshold 0.700"
 ```
+
+**Note**: The pipeline separates **verification** (constraint checks) from **acceptance thresholds**. A document can pass verification but still be rejected if it doesn't meet acceptance thresholds. The explanation clearly indicates both types of failures with quantitative information.
 
 ### Integration with External Systems
 

@@ -149,28 +149,36 @@ TEST 1: Constraint Checker
 === Basic Pipeline Example ===
 Pipeline Result:
   Accepted: False
-  Explanation: Document rejected: Contradictions detected: claim1 vs claim2
+  Explanation: Document rejected: Retrieval relevance too low: 0.492; 
+               Contradictions detected: claim1 vs claim2, claim2 vs claim1; 
+               Retrieval score 0.492 below threshold 0.700
   Violations: 1
-  Retrieval Score: 0.510
-  Citation Validity: {'claim1:statute1': 0.515, 'claim2:statute1': 0.515}
+  Retrieval Score: 0.492
+  Citation Validity: {'claim1:statute1': 0.508, 'claim2:statute1': 0.508}
   Contradictions: 2
 ```
 
 This shows:
-- The document was **rejected** because contradictions were detected
-- The system provides **clear explanations** of why it was rejected
-- **Retrieval score** shows relevance (0.510 = 51% relevant)
+- The document was **rejected** with **clear, quantitative explanations**:
+  - Verification failures (contradictions detected)
+  - Threshold failures (retrieval score below acceptance threshold)
+- The system provides **transparent refusal paths** - you know exactly why it was rejected
+- **Retrieval score** shows relevance (0.492 = 49.2% relevant)
 - **Citation validity** shows which citations passed/failed
 - **Contradictions** list shows which claims contradict each other
+- **Threshold information** is included when documents fail acceptance thresholds even if verification passes
 
 ## Key Features Demonstrated
 
 ### 1. Transparent Refusal Paths
 
-Instead of silent failures, you get clear explanations:
+Instead of silent failures, you get clear, quantitative explanations:
 - "Insufficient energy: required 10.0, available 5.0"
 - "Invalid citations: claim1:statute1"
 - "Contradictions detected: claim1 vs claim2"
+- "Retrieval score 0.492 below threshold 0.700" (when threshold checks fail)
+
+**Important**: The system separates **verification** (constraint checks) from **acceptance thresholds**. A document can pass verification but still be rejected if it doesn't meet acceptance thresholds (e.g., retrieval score too low). The explanation clearly indicates both types of failures.
 
 ### 2. Real-World Document Processing
 

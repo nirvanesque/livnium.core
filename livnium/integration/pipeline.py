@@ -253,8 +253,12 @@ class DocumentPipeline:
         is_accepted = verification_report.is_valid
         
         # Additional threshold check
+        rejection_reasons = []
         if verification_report.retrieval_score < accept_threshold:
             is_accepted = False
+            rejection_reasons.append(
+                f"Retrieval score {verification_report.retrieval_score:.3f} below threshold {accept_threshold:.3f}"
+            )
         
         # Build constraint violations list
         violations = []
@@ -263,11 +267,21 @@ class DocumentPipeline:
                 "type": "verification_failed",
                 "explanation": verification_report.explanation
             })
+        if not is_accepted and verification_report.is_valid:
+            # Rejected due to threshold even though verification passed
+            violations.append({
+                "type": "threshold_failed",
+                "explanation": "; ".join(rejection_reasons)
+            })
         
-        explanation = (
-            f"Document {'accepted' if is_accepted else 'rejected'}: "
-            f"{verification_report.explanation}"
-        )
+        # Build explanation
+        if is_accepted:
+            explanation = f"Document accepted: {verification_report.explanation}"
+        else:
+            if rejection_reasons:
+                explanation = f"Document rejected: {verification_report.explanation}; {'; '.join(rejection_reasons)}"
+            else:
+                explanation = f"Document rejected: {verification_report.explanation}"
         
         return PipelineResult(
             stage=PipelineStage.FINALIZE,
