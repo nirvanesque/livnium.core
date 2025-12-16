@@ -11,6 +11,7 @@ import torch
 import torch.nn.functional as F
 
 from livnium.kernel.physics import alignment, divergence, tension
+from livnium.kernel.constants import DIVERGENCE_PIVOT
 from livnium.engine.config import defaults
 from livnium.engine.ops_torch import TorchOps
 
@@ -103,7 +104,7 @@ class BasinField:
         """
         Route state h to best basin for label.
         
-        Uses kernel.physics for all calculations.
+        Vectorized for MPS efficiency - computes all alignments at once.
         
         Args:
             h: State vector
@@ -119,39 +120,29 @@ class BasinField:
         anchors = self.anchors[label]
         h_n = F.normalize(h, dim=0)
         
-        # State wrapper for kernel physics
-        class StateWrapper:
-            def __init__(self, vec):
-                self._vec = vec
-            def vector(self):
-                return self._vec
-            def norm(self):
-                return torch.norm(self._vec, p=2)
-        
-        h_state = StateWrapper(h_n)
-        
         # If no anchors, create first one
         if not anchors:
             anchor = BasinAnchor(h_n, label, step=step)
             self.anchors[label].append(anchor)
             return anchor, 1.0, 0.0, 0.0
         
-        # Find best matching anchor using kernel physics
-        best_anchor = None
-        best_align = None
+        # VECTORIZED: Compute all alignments at once (MPS-optimized)
+        # Stack all anchor centers: [num_anchors, dim]
+        anchor_centers = torch.stack([a.center for a in anchors])  # [N, dim]
+        anchor_centers_norm = F.normalize(anchor_centers, dim=-1, p=2)  # [N, dim]
+        h_n_expanded = h_n.unsqueeze(0)  # [1, dim]
         
-        for a in anchors:
-            anchor_state = StateWrapper(a.center)
-            align = alignment(self.ops, h_state, anchor_state)
-            
-            if best_align is None or align > best_align:
-                best_align = align
-                best_anchor = a
+        # Batched dot product: [N, dim] @ [1, dim]^T -> [N]
+        alignments = (anchor_centers_norm * h_n_expanded).sum(dim=-1)  # [N]
         
-        # Compute divergence and tension using kernel physics
-        anchor_state = StateWrapper(best_anchor.center)
-        div = divergence(self.ops, h_state, anchor_state)
-        tens = tension(self.ops, div)
+        # Find best anchor (vectorized)
+        best_idx = alignments.argmax().item()
+        best_anchor = anchors[best_idx]
+        best_align = alignments[best_idx].item()
+        
+        # Compute divergence and tension (using kernel formula but vectorized)
+        div = DIVERGENCE_PIVOT - best_align
+        tens = abs(div)
         
         # Update anchor usage
         best_anchor.count += 1

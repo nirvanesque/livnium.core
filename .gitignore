@@ -4,6 +4,7 @@
 !*.py
 !*.md
 !*.txt
+!*.pt
 !.gitignore
 
 # === Python ===
@@ -51,13 +52,21 @@ archives-local/
 *.tar.gz
 
 # === Data & large artifacts ===
+# Block all data directories and data files
 **/data/
 experiments/nli/data/
 *.jsonl
 *.npy
 *.npz
 *.bin
-*.pt
+*.csv
+*.tsv
+
+# === Model checkpoints (ALLOW .pt files) ===
+# Allow model checkpoints in logs/ and models/ directories
+!logs/*.pt
+!**/models/*.pt
+!*.pt
 
 # === Model outputs ===
 nova/**/model/

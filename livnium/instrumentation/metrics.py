@@ -8,6 +8,7 @@ from typing import Dict, List, Any, Optional
 from collections import defaultdict
 import json
 from pathlib import Path
+import numpy as np
 
 
 class MetricsTracker:
@@ -86,6 +87,31 @@ class MetricsTracker:
         self.metrics.clear()
         self.current_epoch = 0
     
+    def _make_json_serializable(self, obj):
+        """
+        Convert numpy arrays and other non-serializable types to JSON-serializable formats.
+        
+        Args:
+            obj: Object to convert
+            
+        Returns:
+            JSON-serializable version of object
+        """
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, dict):
+            return {k: self._make_json_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._make_json_serializable(item) for item in obj]
+        elif isinstance(obj, tuple):
+            return tuple(self._make_json_serializable(item) for item in obj)
+        else:
+            return obj
+    
     def save(self, filepath: str):
         """
         Save metrics to JSON file.
@@ -96,8 +122,11 @@ class MetricsTracker:
         filepath = Path(filepath)
         filepath.parent.mkdir(parents=True, exist_ok=True)
         
+        # Convert to JSON-serializable format
+        serializable_metrics = self._make_json_serializable(dict(self.metrics))
+        
         with open(filepath, 'w') as f:
-            json.dump(dict(self.metrics), f, indent=2)
+            json.dump(serializable_metrics, f, indent=2)
     
     def load(self, filepath: str):
         """

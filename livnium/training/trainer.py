@@ -10,6 +10,15 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
+try:
+    from tqdm import tqdm
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
+    # Fallback: create a dummy tqdm that just returns the iterator
+    def tqdm(iterable, **kwargs):
+        return iterable
+
 
 class Trainer:
     """
@@ -76,7 +85,13 @@ class Trainer:
             epoch_correct = 0
             epoch_total = 0
             
-            for batch_idx, batch in enumerate(dataloader):
+            # Progress bar
+            if verbose and HAS_TQDM:
+                pbar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{num_epochs}", unit="batch")
+            else:
+                pbar = dataloader
+            
+            for batch_idx, batch in enumerate(pbar):
                 # Move batch to device
                 batch = {k: v.to(self.device) if isinstance(v, torch.Tensor) else v 
                         for k, v in batch.items()}
@@ -110,7 +125,16 @@ class Trainer:
                 epoch_correct += (preds == labels).sum().item()
                 epoch_total += labels.size(0)
                 
-                if verbose and batch_idx % 100 == 0:
+                # Update progress bar
+                if verbose and HAS_TQDM:
+                    current_acc = epoch_correct / epoch_total if epoch_total > 0 else 0.0
+                    avg_loss_so_far = epoch_loss / (batch_idx + 1)
+                    # Use shorter format to ensure all fields fit
+                    pbar.set_postfix_str(
+                        f'L:{loss.item():.3f} avgL:{avg_loss_so_far:.3f} acc:{current_acc:.3f}',
+                        refresh=False
+                    )
+                elif verbose and batch_idx % 100 == 0:
                     print(f"Epoch {epoch+1}/{num_epochs}, Batch {batch_idx}, "
                           f"Loss: {loss.item():.4f}")
             

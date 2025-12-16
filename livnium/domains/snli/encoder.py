@@ -22,6 +22,7 @@ class SNLIEncoder(nn.Module):
         self,
         text_encoder: Optional[nn.Module] = None,
         dim: int = 256,
+        vocab_size: int = 2000,
         use_mlp: bool = False
     ):
         """
@@ -30,6 +31,7 @@ class SNLIEncoder(nn.Module):
         Args:
             text_encoder: Optional text encoder module (if None, creates simple one)
             dim: Dimension of state vectors
+            vocab_size: Vocabulary size for embedding layer
             use_mlp: Whether to use MLP transformation on encoded vectors
         """
         super().__init__()
@@ -41,7 +43,7 @@ class SNLIEncoder(nn.Module):
         else:
             # Simple fallback encoder (for testing)
             self.text_encoder = None
-            self.embedding = nn.Embedding(1000, dim)  # Simple vocab
+            self.embedding = nn.Embedding(vocab_size, dim)
         
         self.use_mlp = use_mlp
         if use_mlp:

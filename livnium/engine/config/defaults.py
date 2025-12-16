@@ -60,6 +60,12 @@ D_MARGIN: float = 0.4
 NEG_WEIGHT: float = 5.0
 """Weight for negative energy term in loss."""
 
+LAMBDA_ENERGY: float = 0.1
+"""Weight for energy term in LivniumLoss."""
+
+LAMBDA_TENSION: float = 0.1
+"""Weight for tension term in LivniumLoss."""
+
 NORM_REG_WEIGHT: float = 1e-4
 """Weight for norm regularization."""
 

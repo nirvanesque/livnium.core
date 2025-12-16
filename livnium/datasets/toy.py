@@ -5,7 +5,7 @@ Simple synthetic dataset for testing kernel+engine integration.
 """
 
 import torch
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from livnium.datasets.base import LivniumDataset
 
 
