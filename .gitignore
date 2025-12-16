@@ -5,6 +5,7 @@
 !*.md
 !*.txt
 !*.pt
+!*.sh
 !.gitignore
 
 # === Python ===
