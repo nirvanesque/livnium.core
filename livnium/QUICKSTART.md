@@ -114,18 +114,46 @@ h_final, _ = engine.collapse(h0)
 logits = head(h_final, v_p, v_h)
 ```
 
-## Running Tests
+## Flagship Demonstrations
 
+The `document` domain serves as the reference implementation for advanced features.
+
+### 1. Contradiction Reconciliation
+Standard physics-based clustering of conflicting claims.
 ```bash
-# Kernel compliance tests
+python3 examples/document_contradiction_demo.py
+```
+
+### 2. Recursive Projection
+Zooming into semantic basins to resolve residual tension.
+```bash
+python3 examples/document_recursive_demo.py
+```
+
+### 3. Quantum Bias (Hybrid Physics)
+Using quantum entanglement as a "whispering prior" to guide semantics.
+```bash
+python3 examples/document_quantum_demo.py
+```
+
+## Running Tests & Verification
+
+### Constitutional Compliance
+```bash
+# Kernel purity (no hidden imports)
 python3 livnium/tests/kernel/test_kernel_import_clean.py
+
+# No magic constants (hyperparameters must be in defaults.py)
 python3 livnium/tests/kernel/test_no_magic_constants.py
 
-# Engine integration tests
-python3 livnium/tests/engine/test_collapse_integration.py
+# Recursive engine smoke test
+python3 livnium/tests/test_recursive_smoke.py
+```
 
-# Full pipeline test
-python3 livnium/tests/test_full_pipeline.py
+### Final System Verification
+Runs the "Three Sanity Locks" (Bias Ignorability, Moksha Stability, and Structural Integrity).
+```bash
+python3 examples/final_verification.py
 ```
 
 ## Key Constants
@@ -145,7 +173,7 @@ from livnium.engine.config import defaults
 # Access hyperparameters
 print(f"Strength entail: {defaults.STRENGTH_ENTAIL}")
 print(f"Basin tension threshold (v4): {defaults.BASIN_TENSION_THRESHOLD_V4}")
-print(f"Max norm: {defaults.MAX_NORM}")
+print(f"Quantum Bias Strength: {defaults.QUANTUM_BIAS_STRENGTH}")
 ```
 
 ## Architecture Overview
@@ -155,11 +183,12 @@ Input → Domain Encoder → Initial State
                           ↓
                     Collapse Engine (uses kernel.physics)
                           ↓
-                    Final State
+                    Final State (Moksha)
                           ↓
                     Domain Head → Output
 ```
 
 All physics calculations use `kernel.physics.*`.
 All constants come from `kernel.constants` (laws) or `engine.config.defaults` (hyperparameters).
+Research Stack features (Quantum, Recursive) are opt-in via `HybridConfig`.
 
