@@ -24,6 +24,7 @@ from livnium.kernel.constraints import ConstraintChecker
 from livnium.kernel.ledgers import Ledger
 from livnium.integration.constraint_verifier import ConstraintVerifier, VerificationResult
 from livnium.domains.document.reconciler import ContradictionReconciler, ReconciliationResult
+from livnium.domains.document.recursive_projection import RecursiveDocumentOperator, RecursiveReconciliationResult
 
 
 class PipelineStage(Enum):
@@ -88,6 +89,7 @@ class DocumentPipeline:
             constraint_verifier = ConstraintVerifier()
         self.constraint_verifier = constraint_verifier
         self.reconciler = ContradictionReconciler(encoder)
+        self.recursive_operator = RecursiveDocumentOperator(self.reconciler)
     
     def draft(
         self,
@@ -245,6 +247,23 @@ class DocumentPipeline:
         """
         claims = draft_result["claims"]
         return self.reconciler.reconcile(claims)
+    
+    def recursive_refine(
+        self,
+        reconciliation_result: ReconciliationResult,
+        depth: int = 1
+    ) -> RecursiveReconciliationResult:
+        """
+        Recursive Refinement stage: Zoom into high-tension basins.
+        
+        Args:
+            reconciliation_result: Result from reconcile_contradictions()
+            depth: Current recursion depth
+            
+        Returns:
+            RecursiveReconciliationResult with refined clusters
+        """
+        return self.recursive_operator.refine(reconciliation_result, depth=depth)
     
     def finalize(
         self,

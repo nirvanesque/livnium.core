@@ -46,6 +46,7 @@ class ContradictionReconciler:
         self.repulsion_strength = repulsion_strength
         self.convergence_threshold = convergence_threshold
         self.ops = TorchOps()
+        self.claims_cache: List[Claim] = []
 
     def reconcile(
         self,
@@ -55,6 +56,7 @@ class ContradictionReconciler:
         """
         Runs the reconciliation loop on a set of claims.
         """
+        self.claims_cache = claims
         if not claims:
             raise ValueError("No claims provided for reconciliation")
 

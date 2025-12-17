@@ -113,6 +113,15 @@ RECONCILE_NOISE: float = 0.01
 RECONCILE_CONSENSUS: float = 0.9
 """Alignment threshold for reconciliation consensus."""
 
+DOCUMENT_RECURSION_MAX_DEPTH: int = 2
+"""Maximum depth for document-scoped recursion."""
+
+DOCUMENT_RECURSION_MIN_TENSION: float = 0.1
+"""Minimum tension plateau required to trigger recursion."""
+
+DOCUMENT_RECURSION_BUDGET_FRACTION: float = 0.5
+"""Fraction of parent symbolic weight inherited by child universes."""
+
 # Hybrid Physics
 DEFAULT_HYBRID_BIAS: float = 0.1
 """Default weight for hybrid bias influence."""
