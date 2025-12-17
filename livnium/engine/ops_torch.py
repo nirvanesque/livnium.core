@@ -40,9 +40,9 @@ class TorchOps:
         Returns:
             Scalar dot product
         """
-        a_flat = a.flatten().detach()
-        b_flat = b.flatten().detach()
-        return float(torch.dot(a_flat, b_flat))
+        a_flat = a.flatten()
+        b_flat = b.flatten()
+        return torch.dot(a_flat, b_flat)
     
     def norm(self, x, dim: int = -1):
         """

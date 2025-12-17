@@ -300,9 +300,10 @@ class MarketEncoder(nn.Module):
                 state_t = self.encode(features[:, t, :])
                 states.append(state_t)
             if states:
-                # EMA with alpha=0.1
+                # EMA with alpha from defaults
+                from livnium.engine.config import defaults
                 basin = states[0]
-                alpha = 0.1
+                alpha = defaults.MARKET_ALPHA
                 for state in states[1:]:
                     basin = alpha * state + (1 - alpha) * basin
             else:
@@ -315,8 +316,11 @@ class MarketEncoder(nn.Module):
         h0 = v_current + basin
         
         if add_noise:
+            # We already imported defaults if the branch above executed, but to be safe and clean:
+            # We can rely on the import inside if add_noise if the previous block didn't run, 
+            # or just import it at top of function.
+            # Best practice: ensure imported.
             from livnium.engine.config import defaults
             h0 = h0 + defaults.EPS_NOISE * torch.randn_like(h0)
         
         return h0, v_current, basin
-

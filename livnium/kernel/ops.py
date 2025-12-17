@@ -16,7 +16,7 @@ class Ops(Protocol):
     Engine provides concrete implementations (TorchOps, NumpyOps).
     """
     
-    def dot(self, a: Any, b: Any) -> float:
+    def dot(self, a: Any, b: Any) -> Any:
         """
         Dot product of two vectors.
         
@@ -25,7 +25,7 @@ class Ops(Protocol):
             b: Second vector
             
         Returns:
-            Scalar dot product
+            Scalar dot product (may be Tensor or float depending on backend)
         """
         ...
     

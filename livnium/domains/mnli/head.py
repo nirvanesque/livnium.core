@@ -1,5 +1,5 @@
 """
-SNLI Head: Classification Head
+MNLI Head: Classification Head
 
 Inherits from generic NLIHead.
 """
@@ -7,9 +7,9 @@ Inherits from generic NLIHead.
 from livnium.domains.nli.modeling import NLIHead
 
 
-class SNLIHead(NLIHead):
+class MNLIHead(NLIHead):
     """
-    SNLI classification head.
+    MNLI classification head.
     
     Inherits geometry and logic from NLIHead.
     """

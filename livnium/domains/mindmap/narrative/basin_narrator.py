@@ -115,10 +115,12 @@ def narrate_basin(
         hypothesis_parts.append("This region appears to center on an unclear concept")
     
     # Tension/alignment pattern (tentative observation)
+    from livnium.engine.config import defaults
+
     if basin_edges:
-        if avg_tension < 0.15 and avg_alignment > 0.7:
+        if avg_tension < defaults.MINDMAP_TENSION_THRESHOLD and avg_alignment > defaults.MINDMAP_ALIGN_THRESHOLD:
             hypothesis_parts.append("It shows low internal tension and high alignment")
-        elif avg_tension < 0.25:
+        elif avg_tension < 0.25: # Keep heuristic thresholds unless they map to constants
             hypothesis_parts.append("It shows moderate internal tension")
         elif max_tension > 0.4:
             hypothesis_parts.append("It shows significant internal tension between elements")
@@ -140,7 +142,7 @@ def narrate_basin(
         signals.append("Lower stability")
     
     # Alignment signal
-    if avg_alignment > 0.7:
+    if avg_alignment > defaults.MINDMAP_ALIGN_THRESHOLD:
         signals.append("High internal alignment")
     elif avg_alignment > 0.5:
         signals.append("Moderate internal alignment")
@@ -148,7 +150,7 @@ def narrate_basin(
         signals.append("Lower internal alignment")
     
     # Tension signal
-    if avg_tension < 0.15:
+    if avg_tension < defaults.MINDMAP_TENSION_THRESHOLD:
         signals.append("Low internal tension")
     elif avg_tension < 0.3:
         signals.append("Moderate internal tension")

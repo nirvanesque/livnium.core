@@ -11,12 +11,23 @@ import torch
 import torch.nn.functional as F
 
 from livnium.kernel.physics import alignment, divergence, tension
-from livnium.kernel.constants import DIVERGENCE_PIVOT
 from livnium.engine.config import defaults
 from livnium.engine.ops_torch import TorchOps
 
 
 LABELS = ("E", "N", "C")
+
+
+class _TensorState:
+    """Adapter for torch.Tensor to State protocol (same pattern as CollapseEngine)."""
+    def __init__(self, t: torch.Tensor):
+        self.t = t
+    
+    def vector(self):
+        return self.t
+    
+    def norm(self):
+        return torch.norm(self.t, p=2, dim=-1, keepdim=True)
 
 
 class BasinAnchor:
@@ -99,17 +110,22 @@ class BasinField:
         self,
         h: torch.Tensor,
         label: str,
-        step: int
+        step: int,
+        allow_create: bool = False,
+        allow_usage_update: bool = False
     ) -> Tuple[BasinAnchor, float, float, float]:
         """
         Route state h to best basin for label.
         
         Vectorized for MPS efficiency - computes all alignments at once.
+        Final physics uses canonical kernel.physics.* calls.
         
         Args:
             h: State vector
             label: Label ("E", "N", or "C")
             step: Current step
+            allow_create: If True, create first anchor if none exist (training-only)
+            allow_usage_update: If True, update count/last_used_step (training-only)
             
         Returns:
             Tuple of (anchor, alignment, divergence, tension)
@@ -120,35 +136,45 @@ class BasinField:
         anchors = self.anchors[label]
         h_n = F.normalize(h, dim=0)
         
-        # If no anchors, create first one
+        # If no anchors, create first one (only during training)
         if not anchors:
+            if not allow_create:
+                raise RuntimeError(
+                    f"No basins for label '{label}' and allow_create=False. "
+                    f"Cannot route during inference without existing basins."
+                )
             anchor = BasinAnchor(h_n, label, step=step)
             self.anchors[label].append(anchor)
             return anchor, 1.0, 0.0, 0.0
         
         # VECTORIZED: Compute all alignments at once (MPS-optimized)
         # Stack all anchor centers: [num_anchors, dim]
+        # Note: centers are already normalized, no need to normalize again
         anchor_centers = torch.stack([a.center for a in anchors])  # [N, dim]
-        anchor_centers_norm = F.normalize(anchor_centers, dim=-1, p=2)  # [N, dim]
         h_n_expanded = h_n.unsqueeze(0)  # [1, dim]
         
         # Batched dot product: [N, dim] @ [1, dim]^T -> [N]
-        alignments = (anchor_centers_norm * h_n_expanded).sum(dim=-1)  # [N]
+        alignments = (anchor_centers * h_n_expanded).sum(dim=-1)  # [N]
         
         # Find best anchor (vectorized)
-        best_idx = alignments.argmax().item()
+        best_idx = int(alignments.argmax())
         best_anchor = anchors[best_idx]
-        best_align = alignments[best_idx].item()
         
-        # Compute divergence and tension (using kernel formula but vectorized)
-        div = DIVERGENCE_PIVOT - best_align
-        tens = abs(div)
+        # CANONICAL PHYSICS: Use kernel.physics.* for final computation
+        # This ensures consistency with CollapseEngine and prevents drift
+        state_obj = _TensorState(h_n)
+        anchor_obj = _TensorState(best_anchor.center)
         
-        # Update anchor usage
-        best_anchor.count += 1
-        best_anchor.last_used_step = step
+        align_t = alignment(self.ops, state_obj, anchor_obj)  # tensor scalar
+        div_t = divergence(self.ops, state_obj, anchor_obj)    # tensor scalar
+        tens_t = tension(self.ops, div_t)                      # tensor scalar
         
-        return best_anchor, float(best_align), float(div), float(tens)
+        # Update anchor usage (only during training for deterministic inference)
+        if allow_usage_update:
+            best_anchor.count += 1
+            best_anchor.last_used_step = step
+        
+        return best_anchor, float(align_t.item()), float(div_t.item()), float(tens_t.item())
     
     def update(self, anchor: BasinAnchor, h: torch.Tensor, lr: Optional[float] = None):
         """

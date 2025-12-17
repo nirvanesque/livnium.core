@@ -78,3 +78,27 @@ COST_COEFFICIENT: float = 0.05
 GHOST_MASS: float = 0.1
 """Mass for ghost basin (unknown words)."""
 
+
+# Market Domain
+MARKET_ALPHA: float = 0.1
+"""EMA alpha for market basin calculation."""
+
+MARKET_ALIGN_POS: float = 0.15
+"""Positive alignment threshold for market head."""
+
+MARKET_ALIGN_NEG: float = -0.15
+"""Negative alignment threshold (magnitude) for market head."""
+
+# Mindmap Domain
+MINDMAP_TENSION_THRESHOLD: float = 0.15
+"""Tension threshold for mindmap basin narrative."""
+
+MINDMAP_ALIGN_THRESHOLD: float = 0.7
+"""Alignment threshold for mindmap basin narrative."""
+
+# Training Schedules
+SCHEDULE_LAMBDA_START: float = 0.05
+"""Starting lambda value for training schedules (epoch 1)."""
+
+SCHEDULE_LAMBDA_MATURE: float = 0.15
+"""Mature lambda value for training schedules (epoch 3+)."""

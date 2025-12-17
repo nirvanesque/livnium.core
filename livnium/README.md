@@ -76,6 +76,11 @@ Domains cannot modify kernel or engine. They use:
 
 - **`domains/toy/`** - Minimal test domain for kernel+engine wiring
 - **`domains/snli/`** - SNLI (Stanford Natural Language Inference) domain
+- **`domains/mnli/`** - MNLI (Multi-Genre Natural Language Inference) domain
+- **`domains/nli/`** - Shared NLI components and utilities
+- **`domains/market/`** - Financial market regime classification
+- **`domains/mindmap/`** - Narrative generation and thought mapping
+- **`domains/ramsey/`** - Ramsey theory and graph structuring
 - **`domains/document/`** - Document workflow domain (retrieval, citation validity, contradiction checks)
 
 ## Usage Example

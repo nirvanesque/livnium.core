@@ -69,7 +69,12 @@ def main():
     )
     
     # Loss function
-    loss_fn = LivniumLoss(lambda_energy=0.1, lambda_tension=0.1)
+    # Loss function
+    from livnium.engine.config import defaults
+    loss_fn = LivniumLoss(
+        lambda_energy=defaults.LAMBDA_ENERGY,
+        lambda_tension=defaults.LAMBDA_TENSION
+    )
     
     # Train
     logger.info("Starting training...")

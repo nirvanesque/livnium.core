@@ -11,12 +11,22 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from livnium.kernel.types import State
 from livnium.kernel.physics import alignment, divergence, tension
-from livnium.kernel.constants import DIVERGENCE_PIVOT
 from livnium.engine.config import defaults
 from livnium.engine.ops_torch import TorchOps
 from livnium.engine.fields.basin_field import BasinField
 
+class TensorState:
+    """Wrapper to make Tensor satisfy State protocol."""
+    def __init__(self, t: torch.Tensor):
+        self.t = t
+    
+    def vector(self):
+        return self.t
+    
+    def norm(self):
+        return torch.norm(self.t, p=2, dim=-1, keepdim=True)
 
 class CollapseEngine(nn.Module):
     """
@@ -97,6 +107,9 @@ class CollapseEngine(nn.Module):
             )
         else:
             self.basin_field = None
+            
+        # Global step counter for periodic maintenance
+        self._step_counter = 0
     
     def step(
         self,
@@ -114,15 +127,19 @@ class CollapseEngine(nn.Module):
             anchors: List of anchor vectors (normalized)
             strengths: List of force strengths for each anchor
             step_idx: Current step index (for basin tracking)
-            label_map: Optional mapping from batch index to label ("E", "N", "C")
+            label_map: Optional mapping from batch index to label ("E", "N", "C") for basin maintenance (not routing)
             
         Returns:
             Tuple of (updated_state, trace_dict)
+            where trace_dict contains lists of tensors for alignment, divergence, and tension
         """
         squeeze = False
         if h.dim() == 1:
             h = h.unsqueeze(0)
             squeeze = True
+        
+        # Increment global step counter (true unit of time)
+        self._step_counter += 1
         
         # Normalize current state
         h_n = F.normalize(h, dim=-1, p=2)
@@ -147,22 +164,19 @@ class CollapseEngine(nn.Module):
                 anchor_expanded = anchor
             anchor_expanded_list.append(anchor_expanded)
         
-        for anchor, anchor_expanded, strength in zip(anchors, anchor_expanded_list, strengths):
-            # Vectorized batched physics computation (MPS-optimized)
-            # Compute alignment (cosine similarity) for entire batch at once
-            # h_n: [B, dim], anchor_expanded: [B, dim]
-            # Normalize (already normalized, but ensure)
-            h_normalized = F.normalize(h_n, dim=-1, p=2)
-            anchor_normalized = F.normalize(anchor_expanded, dim=-1, p=2)
+        # Wrap state once for kernel calls (avoid inner-loop allocation)
+        state_obj = TensorState(h_n)
+        
+        for anchor_expanded, strength in zip(anchor_expanded_list, strengths):
+            # Vectorized batched physics computation using KERNEL
+            # Wrap anchor for kernel calls
+            anchor_obj = TensorState(anchor_expanded)
             
+            # Compute physics via kernel (guaranteed canonical)
             # Batched dot product: sum(h_n * anchor_n, dim=-1) -> [B]
-            align_tensor = (h_normalized * anchor_normalized).sum(dim=-1)  # [B]
-            
-            # Divergence: DIVERGENCE_PIVOT - alignment
-            div_tensor = DIVERGENCE_PIVOT - align_tensor  # [B]
-            
-            # Tension: |divergence|
-            tens_tensor = torch.abs(div_tensor)  # [B]
+            align_tensor = alignment(self.ops, state_obj, anchor_obj)
+            div_tensor = divergence(self.ops, state_obj, anchor_obj)
+            tens_tensor = tension(self.ops, div_tensor)
             
             trace["alignment"].append(align_tensor)
             trace["divergence"].append(div_tensor)
@@ -189,7 +203,8 @@ class CollapseEngine(nn.Module):
             else:
                 # Compute additional forces from basin anchors
                 # Use average strength as baseline for basin forces
-                avg_strength = sum(strengths) / len(strengths) if strengths else 0.1
+                # Fallback to default entail strength if list empty
+                avg_strength = sum(strengths) / len(strengths) if strengths else defaults.STRENGTH_ENTAIL
                 
                 # OPTIMIZATION: Only route every N steps to reduce overhead
                 # Route every step for first 100 steps (basin formation), then every 3 steps
@@ -208,10 +223,16 @@ class CollapseEngine(nn.Module):
                         best_basin_tens = 0.0
                         
                         # Check all label sets and find best match by physics
+                        # During training (label_map exists), allow basin creation and usage updates
+                        # During inference, freeze all basin state (deterministic)
+                        is_training = label_map is not None
+                        
                         for label in ["E", "N", "C"]:
                             try:
                                 basin_anchor, basin_align, basin_div, basin_tens = self.basin_field.route(
-                                    h_i, label, step_idx
+                                    h_i, label, step_idx, 
+                                    allow_create=is_training,
+                                    allow_usage_update=is_training
                                 )
                                 
                                 # Keep track of best alignment (physics-based selection)
@@ -235,14 +256,19 @@ class CollapseEngine(nn.Module):
                             else:
                                 basin_force = basin_force_i
                             
-                            # Update basin anchor if alignment is good (physics-gated)
-                            if best_basin_align > self.basin_field.align_threshold:
-                                self.basin_field.update(best_basin_anchor, h_i)
+                            # Basin maintenance: ONLY during training (when true label is known)
+                            # This prevents inference-time mutation and ensures determinism
+                            true_label = label_map.get(i) if label_map else None
                             
-                            # Spawn new basin if tension is high and alignment is low (physics-gated)
-                            # Only spawn if we have a label (for training updates, not routing)
-                            if label_map is not None and best_basin_label is not None:
-                                self.basin_field.spawn(h_i, best_basin_label, best_basin_tens, best_basin_align, step_idx)
+                            if true_label is not None:
+                                # Update basin if alignment is good AND label matches (prevent contamination)
+                                if best_basin_align > self.basin_field.align_threshold and true_label == best_basin_label:
+                                    self.basin_field.update(best_basin_anchor, h_i)
+                                
+                                # Spawn new basin if tension HIGH and alignment LOW (physics-gated)
+                                # This prevents basin explosion from spawning every step
+                                if best_basin_tens > self.basin_field.tension_threshold and best_basin_align < self.basin_field.align_threshold:
+                                    self.basin_field.spawn(h_i, true_label, best_basin_tens, best_basin_align, step_idx)
         
         # State update
         delta = self.update(h)
@@ -257,6 +283,10 @@ class CollapseEngine(nn.Module):
             h_new * (self.max_norm / (h_norm + self.ops.eps())),
             h_new
         )
+        
+        # Periodic basin maintenance (global step counter)
+        if self.enable_basins and self.basin_field is not None and self._step_counter % 10 == 0:
+            self.basin_field.prune_and_merge()
         
         if squeeze:
             h_new = h_new.squeeze(0)
@@ -338,12 +368,40 @@ class CollapseEngine(nn.Module):
                 full_trace["tension_contra"].append(step_trace["tension"][1])
                 full_trace["tension_neutral"].append(step_trace["tension"][2])
         
-        # Periodic basin maintenance (prune and merge)
-        if self.enable_basins and self.basin_field is not None and step % 10 == 9:
-            self.basin_field.prune_and_merge()
-        
         return h, full_trace
     
+    def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
+        """
+        Hook to load basin state when part of a larger model (nested loading).
+        """
+        # Call super to load standard parameters
+        super()._load_from_state_dict(state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs)
+        
+        # Handle basin_field state
+        if self.enable_basins and self.basin_field is not None:
+            basin_prefix = prefix + "basin_field."
+            basin_state = {}
+            
+            # Find and extract basin keys
+            # We also need to remove them from unexpected_keys if super() added them
+            for key in list(state_dict.keys()):
+                if key.startswith(basin_prefix):
+                    local_key = key[len(basin_prefix):]
+                    basin_state[local_key] = state_dict[key]
+                    
+                    # Remove from unexpected_keys if present (since we claim it)
+                    if key in unexpected_keys:
+                        unexpected_keys.remove(key)
+            
+            if basin_state:
+                try:
+                    self.basin_field.load_state_dict(basin_state)
+                except Exception as e:
+                    if strict:
+                        error_msgs.append(f"Failed to load basin_field state: {e}")
+                    else:
+                        print(f"Warning: Could not load basin_field state: {e}")
+
     def state_dict(self, destination=None, prefix='', keep_vars=False):
         """
         Custom state_dict that includes basin_field state.
@@ -358,38 +416,6 @@ class CollapseEngine(nn.Module):
         
         return state
     
-    def load_state_dict(self, state_dict, strict=True):
-        """
-        Custom load_state_dict that restores basin_field state.
-        """
-        # Extract basin_field state if present
-        basin_state = {}
-        basin_keys = []
-        for key in list(state_dict.keys()):
-            if key.startswith("basin_field."):
-                basin_key = key[len("basin_field."):]
-                basin_state[basin_key] = state_dict.pop(key)
-                basin_keys.append(key)
-        
-        # Load standard parameters
-        missing_keys, unexpected_keys = super().load_state_dict(state_dict, strict=False)
-        
-        # Restore basin_field if it exists and basins are enabled
-        if self.enable_basins and self.basin_field is not None and basin_state:
-            try:
-                self.basin_field.load_state_dict(basin_state)
-            except Exception as e:
-                if strict:
-                    raise RuntimeError(f"Failed to load basin_field state: {e}")
-                else:
-                    print(f"Warning: Could not load basin_field state: {e}")
-        
-        # Handle strict mode
-        if strict:
-            if missing_keys:
-                raise RuntimeError(f"Missing keys: {missing_keys}")
-            if unexpected_keys:
-                raise RuntimeError(f"Unexpected keys: {unexpected_keys}")
-        
-        return missing_keys, unexpected_keys
+    # Note: We use _load_from_state_dict (PyTorch hook) for state loading.
+    # No need for custom load_state_dict override - it would duplicate logic.
 

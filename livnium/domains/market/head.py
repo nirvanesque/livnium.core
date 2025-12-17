@@ -147,9 +147,12 @@ class MarketHead(nn.Module):
     def classify_regime(
         alignment: float,
         tension: float,
-        align_pos: float = 0.15,
+        # Use defaults if not provided, but here we can't use defaults.XYZ as default arg directly 
+        # unless we import it at top level.  Alternatively, use None and fill in body.
+        # But to match the pattern:
+        align_pos: float = None,
         align_strong_pos: float = 0.40,
-        align_neg: float = -0.15,
+        align_neg: float = None,
         align_strong_neg: float = -0.40,
         low_tension: float = 0.35,
         med_tension: float = 0.80,
@@ -164,9 +167,9 @@ class MarketHead(nn.Module):
         Args:
             alignment: Alignment value from kernel.physics
             tension: Tension value from kernel.physics
-            align_pos: Positive alignment threshold
+            align_pos: Positive alignment threshold (defaults to MARKET_ALIGN_POS)
             align_strong_pos: Strong positive alignment threshold
-            align_neg: Negative alignment threshold
+            align_neg: Negative alignment threshold (defaults to MARKET_ALIGN_NEG)
             align_strong_neg: Strong negative alignment threshold
             low_tension: Low tension threshold
             med_tension: Medium tension threshold
@@ -175,6 +178,12 @@ class MarketHead(nn.Module):
         Returns:
             Regime5 classification
         """
+        from livnium.engine.config import defaults
+        
+        if align_pos is None:
+            align_pos = defaults.MARKET_ALIGN_POS
+        if align_neg is None:
+            align_neg = defaults.MARKET_ALIGN_NEG
         # PANIC: strong negative alignment + very high tension
         if alignment <= align_strong_neg and tension >= panic_tension:
             return Regime5.PANIC

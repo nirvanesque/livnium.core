@@ -102,12 +102,17 @@ def example_constraint_explanation():
     print(f"  Admissible: {check.is_admissible}")
     print(f"  Explanation: {check.explain()}")
     
+    # Example constants (using values from defaults or explicit names)
+    from livnium.engine.config import defaults
+    EXAMPLE_ENERGY_COST = defaults.MAX_NORM
+    EXAMPLE_AVAILABLE_ENERGY = defaults.MAX_NORM / 2
+    
     # Check promotion with insufficient energy
     check_promotion = checker.check_promotion(
         state=state_before,
         depth=2,
-        energy_cost=10.0,
-        available_energy=5.0
+        energy_cost=EXAMPLE_ENERGY_COST,
+        available_energy=EXAMPLE_AVAILABLE_ENERGY
     )
     
     print(f"\nPromotion Check:")

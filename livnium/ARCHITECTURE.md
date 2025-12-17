@@ -26,10 +26,15 @@ livnium/
 │   ├── toy/           # Minimal test domain
 │   │   ├── encoder.py
 │   │   └── head.py
-│   └── snli/          # SNLI domain (gold standard)
-│       ├── encoder.py
-│       └── head.py
-│
+│   ├── snli/          # SNLI domain (gold standard)
+│   │   ├── encoder.py
+│   │   └── head.py
+│   ├── mnli/          # MNLI domain
+│   ├── nli/           # Shared NLI utilities
+│   ├── market/        # Market domain
+│   ├── mindmap/       # Mindmap domain
+│   ├── ramsey/        # Ramsey domain
+│   └── document/      # Document domain
 ├── training/           # Training infrastructure
 │   ├── trainer.py     # Base Trainer class
 │   └── losses.py      # Loss functions (LivniumLoss)
@@ -98,6 +103,7 @@ Input → Domain Encoder → Initial State (h0)
 - `BASIN_TENSION_THRESHOLD_V3 = 0.15` - Versioned thresholds
 - `BASIN_TENSION_THRESHOLD_V4 = 0.20`
 - `MAX_NORM = 10.0` - Norm clipping
+- **Domain Constants**: `MARKET_ALPHA`, `MINDMAP_TENSION_THRESHOLD`, `SCHEDULE_LAMBDA_START` etc.
 - See `engine/config/defaults.py` for full list
 
 ## The One Rule

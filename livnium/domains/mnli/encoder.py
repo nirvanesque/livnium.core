@@ -1,5 +1,5 @@
 """
-SNLI Encoder
+MNLI Encoder
 
 Inherits from generic NLIEncoder.
 """
@@ -7,9 +7,9 @@ Inherits from generic NLIEncoder.
 from livnium.domains.nli.modeling import NLIEncoder
 
 
-class SNLIEncoder(NLIEncoder):
+class MNLIEncoder(NLIEncoder):
     """
-    SNLI encoder.
+    MNLI encoder.
     
     Inherits logic from NLIEncoder.
     """

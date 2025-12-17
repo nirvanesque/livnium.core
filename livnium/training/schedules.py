@@ -96,10 +96,14 @@ class LambdaSchedule:
         
         Args:
             schedule: Dict mapping epoch -> lambda value
-                     Example: {1: 0.05, 2: 0.10, 3: 0.15}
+                     Example: {1: start_val, 2: mid_val, 3: end_val}
         """
         self.schedule = schedule
-        self.default = max(schedule.values()) if schedule else 0.15
+        
+        # Use constant for default fallback
+        from livnium.engine.config import defaults
+        # If schedule is provided, use max value, else default constant
+        self.default = max(schedule.values()) if schedule else defaults.SCHEDULE_LAMBDA_MATURE
     
     def __call__(self, epoch: int) -> float:
         """
@@ -122,13 +126,18 @@ def default_lambda_schedule() -> LambdaSchedule:
     """
     Default lambda schedule from ecw-BT.
     
-    epoch1: lambda = 0.05
-    epoch2: lambda = 0.10
-    epoch3+: lambda = 0.15
+    epoch1: lambda = SCHEDULE_LAMBDA_START
+    epoch2: lambda = mid (avg of start and mature)
+    epoch3+: lambda = SCHEDULE_LAMBDA_MATURE
     """
+    from livnium.engine.config import defaults
+    
+    # Calculate middle step linearly
+    mid = (defaults.SCHEDULE_LAMBDA_START + defaults.SCHEDULE_LAMBDA_MATURE) / 2
+    
     return LambdaSchedule({
-        1: 0.05,
-        2: 0.10,
-        3: 0.15,
+        1: defaults.SCHEDULE_LAMBDA_START,
+        2: mid,
+        3: defaults.SCHEDULE_LAMBDA_MATURE,
     })
 
