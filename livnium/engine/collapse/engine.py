@@ -118,6 +118,7 @@ class CollapseEngine(nn.Module):
         strengths: List[float],
         step_idx: int = 0,
         label_map: Optional[Dict[int, str]] = None,
+        auditor: Optional[Any] = None
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """
         Single collapse step.
@@ -191,6 +192,13 @@ class CollapseEngine(nn.Module):
             force = -strength * div_expanded * direction
             total_force = total_force + force
         
+        # Audio global metrics per step if auditor is present
+        if auditor:
+            # We use the tension to the neutral anchor as a proxy for "global search tension"
+            # or we could average them. Let's average.
+            avg_tension = torch.stack(trace["tension"]).mean().item()
+            auditor.record(step_idx, avg_tension, total_force)
+
         # Basin forces (if enabled) - PHYSICS-BASED ROUTING (no label leakage)
         # Optimized: Skip if no basins exist yet, and reduce routing frequency
         basin_force = torch.zeros_like(h)
@@ -297,6 +305,7 @@ class CollapseEngine(nn.Module):
         self,
         h0: torch.Tensor,
         labels: Optional[torch.Tensor] = None,
+        auditor: Optional[Any] = None
     ) -> Tuple[torch.Tensor, Dict[str, List[torch.Tensor]]]:
         """
         Collapse initial state h0 through L steps.
@@ -354,7 +363,7 @@ class CollapseEngine(nn.Module):
         }
         
         for step in range(self.num_layers):
-            h, step_trace = self.step(h, anchors, strengths, step_idx=step, label_map=label_map)
+            h, step_trace = self.step(h, anchors, strengths, step_idx=step, label_map=label_map, auditor=auditor)
             
             # Store per-anchor traces
             if len(step_trace["alignment"]) == 3:

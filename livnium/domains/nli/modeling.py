@@ -7,7 +7,7 @@ Base classes for NLI Encoder and Head using kernel physics.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Any
 
 
 class NLIEncoder(nn.Module):
@@ -143,7 +143,8 @@ class NLIHead(nn.Module):
         self,
         h_final: torch.Tensor,
         v_p: torch.Tensor,
-        v_h: torch.Tensor
+        v_h: torch.Tensor,
+        auditor: Optional[Any] = None
     ) -> torch.Tensor:
         # Ensure batch dimension
         squeeze = False
@@ -173,15 +174,9 @@ class NLIHead(nn.Module):
             def norm(self):
                 return torch.norm(self._vec, p=2)
         
-        # Compute alignment using kernel.physics
-        align_values = []
-        for i in range(v_p_n.shape[0]):
-            p_state = StateWrapper(v_p_n[i])
-            h_state = StateWrapper(v_h_n[i])
-            align_val = alignment(ops, p_state, h_state)
-            align_values.append(torch.tensor(align_val, device=v_p_n.device, dtype=v_p_n.dtype))
-        
-        align = torch.stack(align_values).unsqueeze(-1)  # [B, 1]
+        # Compute alignment using kernel.physics logic (vectorized for batch)
+        # kernel.physics.alignment(p, h) = p_n . h_n
+        align = (v_p_n * v_h_n).sum(dim=-1, keepdim=True)  # [B, 1]
         
         # Opposition signal
         opp = (-v_p_n * v_h_n).sum(dim=-1, keepdim=True)  # cos(-OM, LO)
