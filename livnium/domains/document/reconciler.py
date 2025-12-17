@@ -12,6 +12,7 @@ import torch
 import torch.nn.functional as F
 from typing import List, Dict, Tuple, Optional, Any
 from dataclasses import dataclass
+from livnium.engine.hooks.hybrid import HybridConfig
 
 from livnium.kernel.physics import alignment, divergence, tension
 from livnium.engine.ops_torch import TorchOps
@@ -51,7 +52,8 @@ class ContradictionReconciler:
     def reconcile(
         self,
         claims: List[Claim],
-        device: torch.device = torch.device("cpu")
+        device: torch.device = torch.device("cpu"),
+        hybrid_config: Optional[HybridConfig] = None
     ) -> ReconciliationResult:
         """
         Runs the reconciliation loop on a set of claims.
@@ -110,6 +112,14 @@ class ContradictionReconciler:
                     force = -strength * div * direction
                     forces[i] = forces[i] + force
             
+            # Apply Hybrid Bias (Quantum/Recursive Whispers)
+            if hybrid_config and hybrid_config.enabled and hybrid_config.hook:
+                # Get bias for current state
+                bias = hybrid_config.hook.bias_for_state(h, step)
+                
+                # Apply weighted bias
+                forces = forces + (hybrid_config.bias_weight * bias)
+
             # Apply update
             h = h + forces
             h = F.normalize(h, dim=-1)

@@ -125,3 +125,6 @@ DOCUMENT_RECURSION_BUDGET_FRACTION: float = 0.5
 # Hybrid Physics
 DEFAULT_HYBRID_BIAS: float = 0.1
 """Default weight for hybrid bias influence."""
+
+QUANTUM_BIAS_STRENGTH: float = 0.2
+"""Strength of quantum entanglement bias force."""
