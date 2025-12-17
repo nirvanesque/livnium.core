@@ -1,10 +1,20 @@
-"""
-LIVNIUM: Law-Governed Platform
+# Production Stack
+from .engine.collapse.engine import CollapseEngine
+from .engine.fields.basin_field import BasinField
 
-Kernel (LUGK): Immutable laws + constants + invariants
-Engine (LUGE): Runtime dynamics (collapse, basins, promotion)
-Domains: SNLI, market, ramsey, etc. as plugins
-"""
+# Research Stack
+from .classical.livnium_core_system import LivniumCoreSystem
+from .recursive.recursive_geometry_engine import RecursiveGeometryEngine
+from .quantum.core.quantum_register import TrueQuantumRegister as QuantumRegister
 
-__version__ = "1.0.0"
+# Constants & Metadata
+from .kernel.constants import DIVERGENCE_PIVOT
 
+__all__ = [
+    'CollapseEngine',
+    'BasinField',
+    'LivniumCoreSystem',
+    'RecursiveGeometryEngine',
+    'QuantumRegister',
+    'DIVERGENCE_PIVOT',
+]

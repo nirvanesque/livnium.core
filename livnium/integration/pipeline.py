@@ -23,6 +23,7 @@ from livnium.domains.document.head import DocumentHead
 from livnium.kernel.constraints import ConstraintChecker
 from livnium.kernel.ledgers import Ledger
 from livnium.integration.constraint_verifier import ConstraintVerifier, VerificationResult
+from livnium.domains.document.reconciler import ContradictionReconciler, ReconciliationResult
 
 
 class PipelineStage(Enum):
@@ -86,6 +87,7 @@ class DocumentPipeline:
         if constraint_verifier is None:
             constraint_verifier = ConstraintVerifier()
         self.constraint_verifier = constraint_verifier
+        self.reconciler = ContradictionReconciler(encoder)
     
     def draft(
         self,
@@ -227,6 +229,22 @@ class DocumentPipeline:
             is_valid=is_valid,
             explanation=explanation
         )
+
+    def reconcile_contradictions(
+        self,
+        draft_result: Dict[str, Any]
+    ) -> ReconciliationResult:
+        """
+        Reconciliation stage: Run mutual attraction/repulsion physics on all claims.
+        
+        Args:
+            draft_result: Result from draft() stage
+            
+        Returns:
+            ReconciliationResult with clusters and contradictions
+        """
+        claims = draft_result["claims"]
+        return self.reconciler.reconcile(claims)
     
     def finalize(
         self,
