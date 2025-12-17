@@ -41,6 +41,7 @@ class NullBias(CollapseBias):
 @dataclass
 class HybridConfig:
     """Config for enabling hybrid influences."""
+    from livnium.engine.config.defaults import DEFAULT_HYBRID_BIAS
     enabled: bool = False
-    bias_weight: float = 0.1
+    bias_weight: float = DEFAULT_HYBRID_BIAS
     hook: Optional[CollapseBias] = None

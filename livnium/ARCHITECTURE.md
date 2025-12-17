@@ -127,6 +127,22 @@ Livnium maintains a dual-stack architecture to separate stable engine dynamics f
 
 The **Production Stack** is the primary engine used for training and inference. The **Research Stack** (Experimental) is used for exploring fractal scalability, true quantum algorithms, and fixed-point truth convergence.
 
+## Domain Maturity: The Reference Pattern
+
+Livnium uses a standardized pattern for domain implementation to ensure architectural consistency.
+
+- **The Teaching Case**: `domains/document/` is the reference implementation.
+- **Contract**: Every domain must implement the **Encoder/Head/Reconciler** triad defined in `domains/DOMAIN_TEMPLATE.md`.
+- **Logic**: Domain reasoning (e.g., Contradiction Reconciler) uses **pure mutual physics forces** from the kernel, not custom heuristics.
+
+## Future Hybrid Physics: The Collapse Hook
+
+To bridge the Research and Production stacks without tight coupling, Livnium uses the **Hybrid Hook interface** (`engine/hooks/hybrid.py`).
+
+- **Interface**: `CollapseBias` defines how an external system (Quantum, Recursive) can "whisper" a bias term into the `CollapseEngine`.
+- **One-Way Influence**: Research components can influence production dynamics without the production engine needing to understand fractal or quantum mechanics.
+- **A/B Testing**: This allow for rigorous comparison of reasoning runs with and without advanced research priors.
+
 ## The One Rule
 
 > **Never let engine convenience leak upward into the kernel.**

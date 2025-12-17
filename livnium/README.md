@@ -1,203 +1,78 @@
-# LIVNIUM: Law-Governed Platform
+# LIVNIUM: Law-Governed Reasoning Platform
 
-LIVNIUM is a system that replaces "searching for answers" with "removing impossible futures until only one path can fall."
+LIVNIUM is a reasoning system that replaces "searching for answers" with **geometric constraint satisfaction**. It operates by removing impossible futures until only one path can fall.
 
-## Architecture
+## The Core Thesis
+Reasoning is not just token prediction; it is an evolution of state through a landscape of constraints. Livnium formalizes this as **Physics-Governed Collapse**:
+1. **Represent**: Data is encoded as state vectors in high-dimensional space.
+2. **Constrain**: Geometric laws (alignment, divergence, tension) define the "stress" between claims.
+3. **Collapse**: An engine evolves the system to minimize tension, reaching a stable "Truth" basin.
 
-```
-livnium/
-  kernel/          # LUGK: Immutable laws + constants + invariants (pure math, no torch/numpy)
-  engine/          # LUGE: Runtime dynamics (collapse, basins, promotion)
-  domains/         # SNLI, market, ramsey, document, etc. as plugins
-  training/        # Trainers, losses, schedules, eval
-  datasets/        # Loaders, preprocessors (no physics here)
-  instrumentation/ # Logging, metrics, profilers, dashboards
-  integration/     # Constraint query API + document pipeline integration
-  tests/           # Kernel invariants + engine behavior tests
-```
+---
 
-## Critical Boundaries
+## Dual-Stack Architecture
 
-- **`kernel/`** imports **nothing** except `typing` - uses `Ops` protocol for tensor operations
-- **`engine/`** provides `ops_torch.py` and `ops_numpy.py` implementations
-- Versioned thresholds go to `engine/config/defaults.py`, NOT `kernel/constants.py`
-- Only axiom-level constants in kernel (e.g., `DIVERGENCE_PIVOT = 0.38`, equilibrium constants)
-- Domains cannot modify kernel or engine - they use kernel.physics and engine.collapse
+Livnium maintains a strict separation between stable production dynamics and experimental research.
 
-## Kernel (LUGK)
+### 1. The Production Stack (Stable)
+Focused on speed, performance, and continuous vector-space reasoning.
+- **[Kernel (LUGK)](livnium/kernel/)**: The immutable constitution. Pure math formulas (alignment, divergence, tension). Imports nothing but `typing`.
+- **[Engine (LUGE)](livnium/engine/)**: Runtime dynamics. Implements the `CollapseEngine` and `BasinField` using Torch/Numpy.
+- **[Domains](livnium/domains/)**: Domain-specific semantics (NLI, Document, Market) implemented as plugins.
 
-The kernel is the immutable constitution:
+### 2. The Research Stack (Experimental)
+Explores discrete geometry, fractal scaling, and true quantum priors.
+- **[Classical Core](livnium/classical/)**: The 3D geometric lattice foundation.
+- **[Recursive Engine](livnium/recursive/)**: "Fractal Machine" for nested structural context and Fixed-Point (Moksha) detection.
+- **[Quantum Layer](livnium/quantum/)**: Real multi-qubit entanglement and Born-rule measurement for hardware-grade ambiguity.
 
-- **`kernel/types.py`** - Protocols for State, Anchor, LedgerRecord, Operation
-- **`kernel/ops.py`** - Ops protocol (dot, norm, clip, where, eps, normalize)
-- **`kernel/constants.py`** - Axiom-level constants only (DIVERGENCE_PIVOT, K_O, K_T, K_C)
-- **`kernel/physics.py`** - Pure formulas using Ops protocol (measurement + invariance ONLY)
-- **`kernel/ledgers.py`** - Observe/validate only, NO enforcement
-- **`kernel/admissibility.py`** - Enforcement logic (separate from ledgers)
+---
 
-### Kernel Rules
+## Flagship Demonstrations
 
-1. **No torch/numpy imports** - kernel imports nothing except `typing`
-2. **State defines capabilities, not shape** - what laws can touch, not what state is
-3. **Ledgers observe, admissibility enforces** - separation of law from policing
-4. **Physics = measurement + invariance, NOT motion** - no forces/dynamics in kernel
+Run these to see the platform in action. Each proves a different layer of the system:
 
-## Engine (LUGE)
+### 1. Semantic Reconciliation: Contradiction Collapse
+**Domain**: `document`
+**Command**: `python3 livnium/examples/document_contradiction_demo.py`
+**Shows**: Using mutual attraction/repulsion forces to resolve conflicting claims in a contract dispute.
 
-The engine provides runtime dynamics:
+### 2. Geometric Truth: Recursive Moksha
+**Layer**: `recursive`
+**Command**: `python3 livnium/examples/recursive_moksha_demo.py`
+**Shows**: A fractal geometry reaching a fixed-point invariant state across nested levels.
 
-- **`engine/ops_torch.py`** - TorchOps implementation
-- **`engine/ops_numpy.py`** - NumpyOps implementation
-- **`engine/config/defaults.py`** - All hyperparameters (versioned thresholds, learning rates, etc.)
-- **`engine/collapse/engine.py`** - Collapse engine using kernel.physics
-- **`engine/fields/basin_field.py`** - Basin field using kernel.physics
+### 3. Absolute Ambiguity: Quantum Bell State
+**Layer**: `quantum`
+**Command**: `python3 livnium/examples/quantum_bell_state.py`
+**Shows**: True linear-algebraic entanglement between qubits, demonstrating real tensor-product physics.
 
-### Engine Rules
+---
 
-1. All physics calculations use `kernel.physics.*` with provided `Ops` instance
-2. All constants come from `kernel.constants` (law-level) or `engine.config.defaults` (hyperparameters)
-3. Never redefine laws or constants
-4. Use config objects for thresholds (which reference defaults)
+## Governance & Compliance
 
-## Domains
-
-Domains are plugins that provide:
-
-- **ConstraintGenerator** - How tension/constraints are produced
-- **Encoder** - How raw input becomes vectors/states
-- **TaskHead** - How to read outputs
-
-Domains cannot modify kernel or engine. They use:
-- `kernel.physics.*` for physics
-- `engine.collapse.*` for dynamics
-- `engine.config.defaults` for hyperparameters
-
-### Available Domains
-
-- **`domains/toy/`** - Minimal test domain for kernel+engine wiring
-- **`domains/snli/`** - SNLI (Stanford Natural Language Inference) domain
-- **`domains/mnli/`** - MNLI (Multi-Genre Natural Language Inference) domain
-- **`domains/nli/`** - Shared NLI components and utilities
-- **`domains/market/`** - Financial market regime classification
-- **`domains/mindmap/`** - Narrative generation and thought mapping
-- **`domains/ramsey/`** - Ramsey theory and graph structuring
-- **`domains/document/`** - Document workflow domain (retrieval, citation validity, contradiction checks)
-- **`domains/physics_embed/`** - Physics-informed word embeddings using Livnium energy objectives
-
-## Quantum Layer (Experimental)
-
-Livnium includes an optional **quantum computing layer** (`livnium/quantum/`) that implements real tensor-product quantum mechanics. See [livnium/quantum/README.md](livnium/quantum/README.md) for details.
-
-## Recursive Layer (Experimental)
-
-The **Recursive Geometry Engine** (`livnium/recursive/`) implements "Fractal Architecture" and fixed-point truth convergence. See [livnium/recursive/README.md](livnium/recursive/README.md) for details.
-
-## Classical Core (Geometric Stack)
-
-The **Classical Core** (`livnium/classical/`) provides the geometric lattice foundation for the research stack (Quantum and Recursive layers). It implements the original 3D lattice axioms.
-
-## Usage Example
-
-```python
-import torch
-from livnium.engine.collapse.engine import CollapseEngine
-from livnium.domains.toy.encoder import ToyEncoder
-from livnium.domains.toy.head import ToyHead
-
-# Create components
-encoder = ToyEncoder(dim=64)
-collapse_engine = CollapseEngine(dim=64, num_layers=3)
-head = ToyHead(dim=64, num_classes=3)
-
-# Encode
-x_a = torch.randn(2)
-x_b = torch.randn(2)
-h0, v_a, v_b = encoder.build_initial_state(x_a, x_b)
-
-# Collapse (uses kernel.physics)
-h_final, trace = collapse_engine.collapse(h0)
-
-# Head
-logits = head(h_final, v_a, v_b)
-```
-
-## Compliance Gates
-
-Run these tests to verify compliance:
+Livnium stays stable through strict **Constitutional Enforcement**. We use automated gates to ensure that experimental layers never contaminate the immutable kernel.
 
 ```bash
-# Verify kernel imports without torch/numpy
+# Verify kernel purity (no torch/numpy imports)
 python3 livnium/tests/kernel/test_kernel_import_clean.py
 
-# Scan for forbidden magic constants
+# Scan for "magic constants" (forces all thresholds into engine config)
 python3 livnium/tests/kernel/test_no_magic_constants.py
 
-# Full pipeline integration test
-python3 livnium/tests/test_full_pipeline.py
+# Validate Layer 0 stability (Recursive Engine Smoke Test)
+python3 livnium/tests/test_recursive_smoke.py
 ```
-
-## Key Constants
-
-### Kernel Constants (Law-Level)
-- `DIVERGENCE_PIVOT = 0.38` - Core physics law
-- `K_O = 9` - Livnium-O equilibrium constant
-- `K_T = 27` - Livnium-T equilibrium constant
-- `K_C = 9` - Livnium-C equilibrium constant
-
-### Engine Config (Hyperparameters)
-- `STRENGTH_ENTAIL = 0.1` - Force strength for entail anchor
-- `BASIN_TENSION_THRESHOLD_V3 = 0.15` - Basin spawn threshold (v3)
-- `BASIN_TENSION_THRESHOLD_V4 = 0.20` - Basin spawn threshold (v4)
-- `MAX_NORM = 10.0` - Norm clipping limit
-- See `engine/config/defaults.py` for full list
-
-## Integration & Constraint System
-
-LIVNIUM now provides first-class constraint query and explanation capabilities:
-
-### Transparent Refusal Paths
-
-Kernel invariants are exposed as queryable constraints that agents can check and understand:
-
-```python
-from livnium.kernel.constraints import ConstraintChecker
-from livnium.kernel.ledgers import Ledger
-
-checker = ConstraintChecker(Ledger())
-check = checker.check_transition(state_before, state_after, Operation.COLLAPSE)
-
-if not check.is_admissible:
-    print(check.explain())
-    # "Action is inadmissible because:
-    #  - State before collapse operation is invalid..."
-```
-
-### Document Workflow Domain
-
-A minimal reference domain for real-world document processing:
-- **Retrieval**: Finding relevant documents using alignment
-- **Citation Validity**: Verifying citations are valid and consistent
-- **Contradiction Checks**: Detecting contradictions within documents
-
-### Document Pipeline Integration
-
-Complete `draft > verify constraints > finalize` workflow for AI Lawyer-style document pipelines:
-
-```python
-from livnium.integration.pipeline import DocumentPipeline
-
-pipeline = DocumentPipeline(encoder, collapse_engine, head)
-result = pipeline.run(claims, document, query="search query")
-
-if not result.is_accepted:
-    print(f"Rejected: {result.explanation}")
-```
-
-See `integration/README.md` for detailed documentation.
 
 ## The One Rule
 
 > **Never let engine convenience leak upward into the kernel.**
 
 If it feels convenient to put something in the kernel, it doesn't belong there. Laws are inconvenient by nature.
+
+---
+
+## Getting Started
+
+See [livnium/domains/DOMAIN_TEMPLATE.md](livnium/domains/DOMAIN_TEMPLATE.md) to build your first physics-governed domain, or explore the [Document Pipeline](livnium/integration/README.md) for real-world integration.
 

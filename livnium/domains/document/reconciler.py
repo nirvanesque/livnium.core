@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from livnium.kernel.physics import alignment, divergence, tension
 from livnium.engine.ops_torch import TorchOps
 from livnium.domains.document.encoder import Claim, DocumentEncoder
+from livnium.engine.config.defaults import RECONCILE_NOISE, RECONCILE_CONSENSUS
 
 @dataclass
 class ReconciliationResult:
@@ -65,7 +66,7 @@ class ContradictionReconciler:
 
         # Initialize states (h) as normalized encoders + noise for symmetry breaking
         h = F.normalize(claim_vectors, dim=-1)
-        h = h + 0.01 * torch.randn_like(h)
+        h = h + RECONCILE_NOISE * torch.randn_like(h)
         h = F.normalize(h, dim=-1)
 
         tension_history = []
@@ -128,7 +129,7 @@ class ContradictionReconciler:
             # Find all j that align with i > threshold
             # We use a threshold significantly higher than DIVERGENCE_PIVOT
             # because they should have collapsed together
-            group_indices = torch.where(final_align[i] > 0.9)[0].tolist()
+            group_indices = torch.where(final_align[i] > RECONCILE_CONSENSUS)[0].tolist()
             cluster = [claim_ids[idx] for idx in group_indices]
             clusters.append(cluster)
             visited.update(group_indices)

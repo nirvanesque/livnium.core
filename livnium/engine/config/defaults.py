@@ -106,3 +106,13 @@ PHYSICS_INIT_STD: float = 0.05
 
 SCHEDULE_LAMBDA_MATURE: float = 0.15
 """Mature lambda value for training schedules (epoch 3+)."""
+# Document Domain
+RECONCILE_NOISE: float = 0.01
+"""Noise scale for contradiction reconciliation."""
+
+RECONCILE_CONSENSUS: float = 0.9
+"""Alignment threshold for reconciliation consensus."""
+
+# Hybrid Physics
+DEFAULT_HYBRID_BIAS: float = 0.1
+"""Default weight for hybrid bias influence."""
