@@ -34,10 +34,10 @@ class Citation:
 @dataclass
 class Claim:
     """Represents a claim in a document."""
-    text: str
     claim_id: str
+    text: str
     position: int
-    citations: List[Citation] = None
+    citations: List[Citation]
 
 
 class DocumentEncoder(nn.Module):
