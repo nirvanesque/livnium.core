@@ -131,9 +131,14 @@ python3 examples/document_recursive_demo.py
 ```
 
 ### 3. Quantum Bias (Hybrid Physics)
-Using quantum entanglement as a "whispering prior" to guide semantics.
 ```bash
 python3 examples/document_quantum_demo.py
+```
+
+### 4. Reasoning Audit (Observability)
+Generate a step-by-step audit of the reconciliation process.
+```bash
+python3 examples/document_audit_demo.py
 ```
 
 ## Running Tests & Verification

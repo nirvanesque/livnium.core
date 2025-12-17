@@ -27,6 +27,7 @@ class ReconciliationResult:
     narrative_centroids: torch.Tensor  # Centroids of the resulting basins [K, dim]
     global_tension_history: List[float]
     final_claims_map: Dict[str, torch.Tensor]  # Final state of each claim
+    audit_summary: Optional[Dict[str, Any]] = None # Audit summary if ledger was used
 
 class ContradictionReconciler:
     """
@@ -53,7 +54,8 @@ class ContradictionReconciler:
         self,
         claims: List[Claim],
         device: torch.device = torch.device("cpu"),
-        hybrid_config: Optional[HybridConfig] = None
+        hybrid_config: Optional[HybridConfig] = None,
+        auditor: Optional[Any] = None # Expecting TensionLedger
     ) -> ReconciliationResult:
         """
         Runs the reconciliation loop on a set of claims.
@@ -90,6 +92,9 @@ class ContradictionReconciler:
             # Global Tension for monitoring
             current_tension = float(torch.abs(div_matrix).mean().item())
             tension_history.append(current_tension)
+            
+            if auditor:
+                auditor.record(step, current_tension, forces if step > 0 else None)
             
             # Compute Force Field
             # For each claim i, compute net force from all j != i
@@ -168,5 +173,6 @@ class ContradictionReconciler:
             contradictions=contradictions,
             narrative_centroids=final_centroids,
             global_tension_history=tension_history,
-            final_claims_map={cid: h[i] for i, cid in enumerate(claim_ids)}
+            final_claims_map={cid: h[i] for i, cid in enumerate(claim_ids)},
+            audit_summary=auditor.get_summary() if auditor else None
         )
