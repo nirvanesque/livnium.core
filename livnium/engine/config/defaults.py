@@ -98,6 +98,10 @@ MINDMAP_ALIGN_THRESHOLD: float = 0.7
 
 # Training Schedules
 SCHEDULE_LAMBDA_START: float = 0.05
+
+# Physics Embed Domain
+PHYSICS_INIT_STD: float = 0.05
+"""Standard deviation for physics embedding initialization."""
 """Starting lambda value for training schedules (epoch 1)."""
 
 SCHEDULE_LAMBDA_MATURE: float = 0.15

@@ -82,6 +82,19 @@ Domains cannot modify kernel or engine. They use:
 - **`domains/mindmap/`** - Narrative generation and thought mapping
 - **`domains/ramsey/`** - Ramsey theory and graph structuring
 - **`domains/document/`** - Document workflow domain (retrieval, citation validity, contradiction checks)
+- **`domains/physics_embed/`** - Physics-informed word embeddings using Livnium energy objectives
+
+## Quantum Layer (Experimental)
+
+Livnium includes an optional **quantum computing layer** (`livnium/quantum/`) that implements real tensor-product quantum mechanics. See [livnium/quantum/README.md](livnium/quantum/README.md) for details.
+
+## Recursive Layer (Experimental)
+
+The **Recursive Geometry Engine** (`livnium/recursive/`) implements "Fractal Architecture" and fixed-point truth convergence. See [livnium/recursive/README.md](livnium/recursive/README.md) for details.
+
+## Classical Core (Geometric Stack)
+
+The **Classical Core** (`livnium/classical/`) provides the geometric lattice foundation for the research stack (Quantum and Recursive layers). It implements the original 3D lattice axioms.
 
 ## Usage Example
 

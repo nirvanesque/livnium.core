@@ -34,7 +34,17 @@ livnium/
 │   ├── market/        # Market domain
 │   ├── mindmap/       # Mindmap domain
 │   ├── ramsey/        # Ramsey domain
-│   └── document/      # Document domain
+│   ├── document/      # Document domain
+│   └── physics_embed/ # Physics embeddings domain
+├── quantum/           # Quantum layer (experimental)
+│   ├── core/         # Pure quantum mechanics
+│   └── lattice/      # Integration with geometric stack
+├── recursive/         # Recursive geometry layer (experimental)
+│   ├── recursive_geometry_engine.py
+│   └── moksha_engine.py
+├── classical/         # Geometric foundation (Original stack)
+│   ├── livnium_core_system.py
+│   └── datagrid.py / datacube.py
 ├── training/           # Training infrastructure
 │   ├── trainer.py     # Base Trainer class
 │   └── losses.py      # Loss functions (LivniumLoss)
@@ -105,6 +115,17 @@ Input → Domain Encoder → Initial State (h0)
 - `MAX_NORM = 10.0` - Norm clipping
 - **Domain Constants**: `MARKET_ALPHA`, `MINDMAP_TENSION_THRESHOLD`, `SCHEDULE_LAMBDA_START` etc.
 - See `engine/config/defaults.py` for full list
+
+## Research vs. Production Stack
+
+Livnium maintains a dual-stack architecture to separate stable engine dynamics from experimental geometric research:
+
+| Stack | Focus | Layers | State Model |
+| :--- | :--- | :--- | :--- |
+| **Production** | Speed & Performance | `kernel`, `engine`, `domains` | Continuous Vector Space |
+| **Research** | Advanced Theory | `classical`, `quantum`, `recursive` | 3D Lattice / Hilbert Space |
+
+The **Production Stack** is the primary engine used for training and inference. The **Research Stack** (Experimental) is used for exploring fractal scalability, true quantum algorithms, and fixed-point truth convergence.
 
 ## The One Rule
 

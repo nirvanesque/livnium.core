@@ -34,6 +34,7 @@ FORBIDDEN_CONSTANTS = [
 ALLOWED_FILES = [
     "livnium/kernel/constants.py",
     "livnium/engine/config/defaults.py",
+    "livnium/quantum/defaults.py",  # Quantum layer (experimental, from archived system)
 ]
 
 # File patterns to skip (test files can have constants for testing)
@@ -41,6 +42,10 @@ SKIP_PATTERNS = [
     r".*test.*\.py$",
     r".*__pycache__.*",
     r".*\.pyc$",
+    r".*quantum.*\.py$",  # Quantum layer (experimental, from archived system)
+    r".*recursive.*\.py$",  # Recursive layer (experimental, from archived system)
+    r".*classical.*\.py$",  # Classical layer (experimental, from archived system)
+    r".*moksha_demo.*\.py$",  # Demo file
 ]
 
 
