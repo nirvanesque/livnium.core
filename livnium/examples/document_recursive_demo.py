@@ -8,7 +8,7 @@ high-tension basins and re-runs reconciliation at a finer semantic scale.
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import torch
 from livnium.domains.document.encoder import DocumentEncoder, Claim
