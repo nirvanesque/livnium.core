@@ -4,6 +4,8 @@
 
 LIVNIUM is a system that replaces "searching for answers" with "removing impossible futures until only one path can fall."
 
+Like recent energy-based / test-time optimization work, Livnium treats inference as iterative dynamics but it enforces a strict immutable ‘kernel of laws’ with compliance gates, so domains can’t smuggle heuristics into physics.
+
 > **⚠️ Stability Notice**: This version (v1.0.0) is **not stable** and is intended for research purposes only. The API may change, and there may be bugs or incomplete features. Use at your own risk. Production use is not recommended at this time.
 
 ## What is LIVNIUM?
